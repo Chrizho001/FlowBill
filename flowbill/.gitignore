@@ -9,3 +9,6 @@ staticfiles/
 htmlcov/
 dist/
 *.egg-info/
+
+# runtime logs (keep .gitkeep only)
+logs/*.log
