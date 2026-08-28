@@ -1,0 +1,86 @@
+{% extends "emails/base_email.html" %}
+
+{% block subject %}New Invoice {{ invoice.number }} from {{ issuer_name }}{% endblock %}
+
+{% block content %}
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+  <!-- Header -->
+  <tr>
+    <td>
+      <h1 style="margin: 0 0 8px 0; color: #0F172A; font-size: 20px; font-weight: 700; line-height: 28px;">
+        New Invoice Received 📄
+      </h1>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 24px;">
+        Dear {{ client_name }},<br>
+        <strong>{{ issuer_name }}</strong> has issued invoice <strong>{{ invoice.number }}</strong> for your review and payment.
+      </p>
+    </td>
+  </tr>
+
+  <!-- Invoice Details Summary Card -->
+  <tr>
+    <td style="padding: 0 0 24px 0;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px 24px;">
+        <tr>
+          <td style="padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748B;">Amount Due</div>
+            <div style="font-size: 28px; font-weight: 800; color: #0F172A; margin-top: 4px;">
+              {{ invoice.currency }} {{ invoice.total|floatformat:2 }}
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-top: 16px;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td width="50%" style="vertical-align: top;">
+                  <div style="font-size: 11px; color: #64748B; text-transform: uppercase; font-weight: 600;">Invoice #</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #1E293B; margin-top: 2px;">{{ invoice.number }}</div>
+                </td>
+                <td width="50%" style="vertical-align: top;">
+                  <div style="font-size: 11px; color: #64748B; text-transform: uppercase; font-weight: 600;">Due Date</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #E11D48; margin-top: 2px;">{{ invoice.due_date }}</div>
+                </td>
+              </tr>
+              {% if invoice.notes %}
+              <tr>
+                <td colspan="2" style="padding-top: 14px;">
+                  <div style="font-size: 11px; color: #64748B; text-transform: uppercase; font-weight: 600;">Notes</div>
+                  <div style="font-size: 13px; color: #475569; margin-top: 2px;">{{ invoice.notes }}</div>
+                </td>
+              </tr>
+              {% endif %}
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Direct Portal CTA Button -->
+  {% if magic_link %}
+  <tr>
+    <td align="center" style="padding: 0 0 24px 0;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center" style="border-radius: 8px; background-color: #4F46E5;">
+            <a href="{{ magic_link }}" target="_blank" style="display: inline-block; padding: 14px 36px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: #4F46E5; border: 1px solid #4F46E5;">
+              View & Pay Invoice Online →
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endif %}
+
+  <!-- PDF Attachment Notice -->
+  <tr>
+    <td style="border-top: 1px solid #F1F5F9; padding-top: 20px;">
+      <p style="margin: 0; color: #64748B; font-size: 13px; line-height: 20px;">
+        📎 A full itemized PDF version of this invoice is attached to this email for your accounting records.
+      </p>
+    </td>
+  </tr>
+</table>
+{% endblock %}

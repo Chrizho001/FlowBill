@@ -1,0 +1,66 @@
+{% extends "emails/base_email.html" %}
+
+{% block subject %}Verify your FlowBill account: {{ otp }}{% endblock %}
+
+{% block content %}
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+  <!-- Greeting & Header -->
+  <tr>
+    <td>
+      <h1 style="margin: 0 0 12px 0; color: #0F172A; font-size: 20px; font-weight: 700; line-height: 28px;">
+        Welcome to FlowBill, {{ full_name }}! 👋
+      </h1>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 24px;">
+        Thank you for joining FlowBill. Please use the 6-digit verification code below to confirm your email address and activate your account.
+      </p>
+    </td>
+  </tr>
+
+  <!-- OTP Code Display Box -->
+  <tr>
+    <td align="center" style="padding: 12px 0 24px 0;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="background-color: #EEF2FF; border: 2px dashed #818CF8; border-radius: 12px; padding: 18px 28px; width: 100%; max-width: 380px;">
+        <tr>
+          <td align="center">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #4F46E5; margin-bottom: 6px;">
+              Verification Code
+            </div>
+            <div class="otp-code" style="font-family: 'SF Mono', Consolas, Monaco, monospace; font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #312E81; line-height: 1.2;">
+              {{ otp }}
+            </div>
+            <div style="font-size: 12px; color: #6366F1; margin-top: 6px;">
+              Valid for 15 minutes
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Direct CTA Button -->
+  {% if verification_url %}
+  <tr>
+    <td align="center" style="padding: 0 0 24px 0;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center" style="border-radius: 8px; background-color: #4F46E5;">
+            <a href="{{ verification_url }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: #4F46E5; border: 1px solid #4F46E5;">
+              Verify Email Instantly →
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endif %}
+
+  <!-- Security Note -->
+  <tr>
+    <td style="border-top: 1px solid #F1F5F9; padding-top: 20px;">
+      <p style="margin: 0; color: #64748B; font-size: 13px; line-height: 20px;">
+        🔒 <strong>Security tip:</strong> Never share this code with anyone. If you didn't create a FlowBill account, you can safely ignore this email.
+      </p>
+    </td>
+  </tr>
+</table>
+{% endblock %}

@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+:root {
+  --background: #020a06;
+  --foreground: #e8f5ee;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+  --font-display: var(--font-space-grotesk), var(--font-geist-sans), sans-serif;
+
+  /* FlowBill aurora palette — shared by every landing section */
+  --color-void: #020a06;
+  --color-abyss: #031209;
+  --color-mint: #6ee7b7;
+  --color-aurora-1: #10b981;
+  --color-aurora-2: #2dd4bf;
+  --color-aurora-3: #14b8a6;
+
+  --shadow-glow-mint: 0 0 40px -10px rgba(52, 211, 153, 0.45);
+  --shadow-glow-deep: 0 0 120px -20px rgba(16, 185, 129, 0.35);
+}
+
+/*
+ * Responsive container — every landing section wraps its content in this.
+ * Centered with responsive edge padding from 390px up to 4K.
+ */
+@utility container {
+  margin-inline: auto;
+  width: 100%;
+  @variant sm {
+    max-width: 640px;
+  }
+  @variant md {
+    max-width: 768px;
+  }
+  @variant lg {
+    max-width: 1024px;
+  }
+  @variant xl {
+    max-width: 1280px;
+  }
+  @variant 2xl {
+    max-width: 1440px;
+  }
+}
+
+/* ---- Keyframes ---- */
+
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate3d(-10%, -6%, 0) scale(1); }
+  33% { transform: translate3d(6%, 4%, 0) scale(1.15); }
+  66% { transform: translate3d(-4%, 8%, 0) scale(0.95); }
+}
+
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate3d(8%, 6%, 0) scale(1.1); }
+  33% { transform: translate3d(-8%, -4%, 0) scale(0.9); }
+  66% { transform: translate3d(2%, -10%, 0) scale(1.2); }
+}
+
+@keyframes aurora-drift-3 {
+  0%, 100% { transform: translate3d(0%, 0%, 0) scale(1); }
+  50% { transform: translate3d(-6%, 6%, 0) scale(1.25); }
+}
+
+@keyframes idle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-150%) skewX(-15deg); }
+  100% { transform: translateX(250%) skewX(-15deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(110, 231, 183, 0); }
+}
+
+@keyframes scroll-cue {
+  0%, 100% { transform: translateY(0); opacity: 0.9; }
+  50% { transform: translateY(6px); opacity: 0.4; }
+}
+
+/* ---- Utilities ---- */
+
+@utility animate-aurora-1 {
+  animation: aurora-drift-1 22s ease-in-out infinite;
+}
+
+@utility animate-aurora-2 {
+  animation: aurora-drift-2 28s ease-in-out infinite;
+}
+
+@utility animate-aurora-3 {
+  animation: aurora-drift-3 34s ease-in-out infinite;
+}
+
+@utility animate-idle-float {
+  animation: idle-float 6s ease-in-out infinite;
+}
+
+@utility animate-pulse-dot {
+  animation: pulse-dot 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@utility animate-scroll-cue {
+  animation: scroll-cue 2s ease-in-out infinite;
+}
+
+@utility text-gradient-mint {
+  background-image: linear-gradient(to bottom right, #ffffff 20%, var(--color-mint) 85%);
+  background-clip: text;
+  color: transparent;
+}
+
+/* Fine grid texture overlay for the aurora background */
+@utility bg-grid-mint {
+  background-image:
+    linear-gradient(to right, rgba(110, 231, 183, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(110, 231, 183, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+::selection {
+  background: rgba(16, 185, 129, 0.35);
+  color: #ffffff;
+}
+
+/* Respect users who prefer calm — kill all ambient loops */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

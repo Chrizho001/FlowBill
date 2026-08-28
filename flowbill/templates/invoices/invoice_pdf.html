@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invoice {{ invoice.number }}</title>
+  <style>
+    /* ── Reset & Base ───────────────────────────────────────── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: #1E293B;
+      background: #ffffff;
+      padding: 0;
+    }
+
+    /* ── Page Layout ────────────────────────────────────────── */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 14mm 16mm;
+      position: relative;
+      background: #ffffff;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 3px solid #4F46E5;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: #4F46E5;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #4F46E5;
+      letter-spacing: -0.5px;
+    }
+
+    .invoice-badge {
+      text-align: right;
+    }
+
+    .invoice-badge .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .invoice-badge .number {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1E293B;
+      letter-spacing: -0.5px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+
+    .status-paid     { background: #DCFCE7; color: #166534; }
+    .status-pending  { background: #FEF3C7; color: #92400E; }
+    .status-overdue  { background: #FEE2E2; color: #991B1B; }
+    .status-draft    { background: #F1F5F9; color: #475569; }
+    .status-cancelled{ background: #F1F5F9; color: #475569; }
+
+    /* ── Parties Section ─────────────────────────────────────── */
+    .parties {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      gap: 40px;
+    }
+
+    .party {
+      flex: 1;
+    }
+
+    .party-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #4F46E5;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    .party-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1E293B;
+      margin-bottom: 4px;
+    }
+
+    .party-detail {
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.6;
+    }
+
+    /* ── Meta Info Strip ─────────────────────────────────────── */
+    .meta-strip {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      gap: 16px;
+    }
+
+    .meta-item {
+      text-align: center;
+      flex: 1;
+    }
+
+    .meta-item:not(:last-child) {
+      border-right: 1px solid #E2E8F0;
+      padding-right: 16px;
+    }
+
+    .meta-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1E293B;
+    }
+
+    .meta-value.overdue {
+      color: #DC2626;
+    }
+
+    /* ── Line Items Table ────────────────────────────────────── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #4F46E5;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+
+    thead tr {
+      background: #4F46E5;
+    }
+
+    thead th {
+      padding: 10px 14px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: left;
+    }
+
+    thead th.right { text-align: right; }
+
+    tbody tr {
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #FAFAFA;
+    }
+
+    tbody td {
+      padding: 11px 14px;
+      font-size: 12.5px;
+      color: #334155;
+      vertical-align: top;
+    }
+
+    tbody td.right { text-align: right; font-weight: 500; }
+    tbody td.muted { color: #94A3B8; font-size: 11px; }
+
+    /* ── Totals ──────────────────────────────────────────────── */
+    .totals-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 32px;
+    }
+
+    .totals-box {
+      width: 280px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      font-size: 12.5px;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .totals-row .label { color: #64748B; }
+    .totals-row .value { font-weight: 600; color: #1E293B; }
+
+    .totals-row.discount .value { color: #16A34A; }
+
+    .totals-row.total-final {
+      background: #4F46E5;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 8px;
+      border-bottom: none;
+    }
+
+    .totals-row.total-final .label {
+      color: #C7D2FE;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .totals-row.total-final .value {
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    /* ── Notes & Payment Info ────────────────────────────────── */
+    .bottom-section {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .notes-box, .payment-box {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .box-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: #4F46E5;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    .box-content {
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.7;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .footer {
+      position: absolute;
+      bottom: 14mm;
+      left: 16mm;
+      right: 16mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .footer-left {
+      font-size: 10px;
+      color: #94A3B8;
+    }
+
+    .footer-right {
+      font-size: 10px;
+      color: #94A3B8;
+      text-align: right;
+    }
+
+    .footer-brand {
+      font-size: 10px;
+      color: #CBD5E1;
+      text-align: center;
+    }
+
+    .footer-brand span {
+      color: #4F46E5;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-name">FlowBill</div>
+    </div>
+    <div class="invoice-badge">
+      <div class="label">Invoice</div>
+      <div class="number">{{ invoice.number }}</div>
+      <span class="status-badge status-{{ invoice.status }}">{{ invoice.status }}</span>
+    </div>
+  </div>
+
+  <!-- From / To -->
+  <div class="parties">
+    <div class="party">
+      <div class="party-label">From</div>
+      <div class="party-name">{{ owner.full_name }}</div>
+      <div class="party-detail">
+        {{ owner.email }}<br/>
+        {% if owner_profile.business_name %}{{ owner_profile.business_name }}<br/>{% endif %}
+        {% if owner_profile.phone %}{{ owner_profile.phone }}{% endif %}
+      </div>
+    </div>
+    <div class="party">
+      <div class="party-label">Bill To</div>
+      <div class="party-name">{{ client.name }}</div>
+      <div class="party-detail">
+        {% if client.company_name %}{{ client.company_name }}<br/>{% endif %}
+        {{ client.email }}<br/>
+        {% if client.phone %}{{ client.phone }}<br/>{% endif %}
+        {% if client.city %}{{ client.city }}{% if client.country %}, {{ client.country }}{% endif %}{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta Strip -->
+  <div class="meta-strip">
+    <div class="meta-item">
+      <div class="meta-label">Issue Date</div>
+      <div class="meta-value">{{ invoice.issue_date|date:"M d, Y" }}</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Due Date</div>
+      <div class="meta-value {% if invoice.is_overdue %}overdue{% endif %}">
+        {{ invoice.due_date|date:"M d, Y" }}
+      </div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Payment Terms</div>
+      <div class="meta-value">{{ invoice.get_payment_terms_display }}</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Currency</div>
+      <div class="meta-value">{{ invoice.currency }}</div>
+    </div>
+  </div>
+
+  <!-- Line Items -->
+  <div class="section-title">Services & Items</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 45%">Description</th>
+        <th class="right" style="width: 12%">Qty</th>
+        <th class="right" style="width: 18%">Unit Price</th>
+        <th class="right" style="width: 12%">Tax %</th>
+        <th class="right" style="width: 13%">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in line_items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td class="right">{{ item.quantity }}</td>
+        <td class="right">{{ invoice.currency }} {{ item.unit_price|floatformat:2 }}</td>
+        <td class="right">
+          {% if item.tax_rate %}{{ item.tax_rate }}%{% else %}—{% endif %}
+        </td>
+        <td class="right">{{ invoice.currency }} {{ item.total|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Totals -->
+  <div class="totals-wrapper">
+    <div class="totals-box">
+      <div class="totals-row">
+        <span class="label">Subtotal</span>
+        <span class="value">{{ invoice.currency }} {{ invoice.subtotal|floatformat:2 }}</span>
+      </div>
+      {% if invoice.tax_amount %}
+      <div class="totals-row">
+        <span class="label">Tax</span>
+        <span class="value">{{ invoice.currency }} {{ invoice.tax_amount|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+      {% if invoice.discount_amount %}
+      <div class="totals-row discount">
+        <span class="label">Discount</span>
+        <span class="value">− {{ invoice.currency }} {{ invoice.discount_amount|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+      <div class="totals-row total-final">
+        <span class="label">Total Due</span>
+        <span class="value">{{ invoice.currency }} {{ invoice.total|floatformat:2 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes & Payment Info -->
+  {% if invoice.notes or payment_instructions %}
+  <div class="bottom-section">
+    {% if invoice.notes %}
+    <div class="notes-box">
+      <div class="box-title">Notes</div>
+      <div class="box-content">{{ invoice.notes }}</div>
+    </div>
+    {% endif %}
+    {% if payment_instructions %}
+    <div class="payment-box">
+      <div class="box-title">Payment Instructions</div>
+      <div class="box-content">{{ payment_instructions }}</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">{{ invoice.number }}</div>
+    <div class="footer-brand">Powered by <span>FlowBill</span></div>
+    <div class="footer-right">{{ owner.email }}</div>
+  </div>
+
+</div>
+</body>
+</html>

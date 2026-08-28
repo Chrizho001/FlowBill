@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{% block subject %}FlowBill{% endblock %}</title>
+  <style>
+    /* Reset styles */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    table { border-collapse: collapse !important; }
+    body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    
+    /* Responsive styles */
+    @media screen and (max-width: 600px) {
+      .email-container { width: 100% !important; padding: 12px !important; }
+      .content-cell { padding: 24px 18px !important; }
+      .otp-code { font-size: 28px !important; letter-spacing: 6px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1E293B;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8FAFC; padding: 32px 0;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="560" class="email-container" style="max-width: 560px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #E2E8F0;">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td align="center" style="background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%); padding: 32px 24px; text-align: center;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.15); width: 44px; height: 44px; border-radius: 12px; line-height: 44px; text-align: center; margin-bottom: 8px;">
+                      <span style="color: #ffffff; font-size: 22px; font-weight: 900;">⚡</span>
+                    </div>
+                    <div style="color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-top: 4px;">FlowBill</div>
+                    <div style="color: rgba(255, 255, 255, 0.8); font-size: 12px; font-weight: 500; letter-spacing: 0.5px; margin-top: 2px;">Freelance Billing & Invoicing</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td class="content-cell" style="padding: 36px 32px; background-color: #ffffff;">
+              {% block content %}
+              <!-- Content injected by child templates -->
+              {% endblock %}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; text-align: center;">
+              <p style="margin: 0 0 8px 0; color: #64748B; font-size: 12px; line-height: 18px;">
+                © {% now "Y" %} FlowBill. All rights reserved.
+              </p>
+              <p style="margin: 0; color: #94A3B8; font-size: 11px; line-height: 16px;">
+                This is an automated transactional message. If you did not request this, please contact support.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
