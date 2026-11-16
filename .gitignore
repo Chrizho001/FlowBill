@@ -24,3 +24,6 @@ __pycache__/
 
 # Node (in case anything runs from the root)
 node_modules/
+
+# Vercel CLI link
+.vercel/

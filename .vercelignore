@@ -1,0 +1,11 @@
+# Only the Next.js app in frontend/ is deployed (project Root Directory = frontend)
+/*
+!/frontend
+/frontend/.agents
+/frontend/.claude
+/frontend/data
+/frontend/docs
+/frontend/node_modules
+/frontend/.next
+/frontend/.vercel
+/frontend/.env*
