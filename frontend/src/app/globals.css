@@ -1,149 +1,188 @@
 @import "tailwindcss";
 
-:root {
-  --background: #020a06;
-  --foreground: #e8f5ee;
-}
-
+/* FlowBill design tokens — see frontend/design.md §1 */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
 
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
-  --font-display: var(--font-space-grotesk), var(--font-geist-sans), sans-serif;
+  /* Navy matched to the inspiration's hero (lighter, bluer) */
+  --color-navy-950: #1a2347;
+  --color-navy-900: #27325e;
+  --color-navy-800: #323f74;
+  --color-navy-700: #44528c;
+  --color-navy-300: #b7c0e2;
 
-  /* FlowBill aurora palette — shared by every landing section */
-  --color-void: #020a06;
-  --color-abyss: #031209;
-  --color-mint: #6ee7b7;
-  --color-aurora-1: #10b981;
-  --color-aurora-2: #2dd4bf;
-  --color-aurora-3: #14b8a6;
+  --color-coral-600: #d93a43;
+  --color-coral-500: #f2545b;
+  --color-coral-400: #f7777d;
+  --color-coral-100: #ffe4e5;
 
-  --shadow-glow-mint: 0 0 40px -10px rgba(52, 211, 153, 0.45);
-  --shadow-glow-deep: 0 0 120px -20px rgba(16, 185, 129, 0.35);
+  --color-surface: #f5f7fc;
+  --color-ink: #1a2347;
+  --color-ink-muted: #5a6388;
+  --color-line: #e3e7f2;
+  --color-teal-400: #2dd4bf;
+
+  --radius-chip: 8px;
+  --radius-btn: 8px;
+  --radius-card: 20px;
+  --radius-frame: 28px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --shadow-card: 0 1px 2px rgb(20 28 66 / 0.06), 0 12px 32px -12px rgb(20 28 66 / 0.18);
+  --shadow-card-hover: 0 1px 2px rgb(20 28 66 / 0.06), 0 24px 48px -16px rgb(20 28 66 / 0.28);
+  --shadow-float: 0 30px 60px -20px rgb(5 10 35 / 0.55);
 }
 
-/*
- * Responsive container — every landing section wraps its content in this.
- * Centered with responsive edge padding from 390px up to 4K.
- */
+/* Responsive container — every section's content sits in one .container (design.md §1.4) */
 @utility container {
   margin-inline: auto;
   width: 100%;
+  padding-inline: 1.25rem;
   @variant sm {
     max-width: 640px;
+    padding-inline: 1.5rem;
   }
   @variant md {
     max-width: 768px;
+    padding-inline: 2rem;
   }
   @variant lg {
     max-width: 1024px;
+    padding-inline: 2.5rem;
   }
   @variant xl {
     max-width: 1280px;
   }
   @variant 2xl {
-    max-width: 1440px;
+    max-width: 1400px;
   }
 }
 
-/* ---- Keyframes ---- */
-
-@keyframes aurora-drift-1 {
-  0%, 100% { transform: translate3d(-10%, -6%, 0) scale(1); }
-  33% { transform: translate3d(6%, 4%, 0) scale(1.15); }
-  66% { transform: translate3d(-4%, 8%, 0) scale(0.95); }
-}
-
-@keyframes aurora-drift-2 {
-  0%, 100% { transform: translate3d(8%, 6%, 0) scale(1.1); }
-  33% { transform: translate3d(-8%, -4%, 0) scale(0.9); }
-  66% { transform: translate3d(2%, -10%, 0) scale(1.2); }
-}
-
-@keyframes aurora-drift-3 {
-  0%, 100% { transform: translate3d(0%, 0%, 0) scale(1); }
-  50% { transform: translate3d(-6%, 6%, 0) scale(1.25); }
-}
-
-@keyframes idle-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes shimmer-sweep {
-  0% { transform: translateX(-150%) skewX(-15deg); }
-  100% { transform: translateX(250%) skewX(-15deg); }
-}
-
-@keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.55); }
-  70% { box-shadow: 0 0 0 8px rgba(110, 231, 183, 0); }
-}
-
-@keyframes scroll-cue {
-  0%, 100% { transform: translateY(0); opacity: 0.9; }
-  50% { transform: translateY(6px); opacity: 0.4; }
-}
-
-/* ---- Utilities ---- */
-
-@utility animate-aurora-1 {
-  animation: aurora-drift-1 22s ease-in-out infinite;
-}
-
-@utility animate-aurora-2 {
-  animation: aurora-drift-2 28s ease-in-out infinite;
-}
-
-@utility animate-aurora-3 {
-  animation: aurora-drift-3 34s ease-in-out infinite;
-}
-
-@utility animate-idle-float {
-  animation: idle-float 6s ease-in-out infinite;
-}
-
-@utility animate-pulse-dot {
-  animation: pulse-dot 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@utility animate-scroll-cue {
-  animation: scroll-cue 2s ease-in-out infinite;
-}
-
-@utility text-gradient-mint {
-  background-image: linear-gradient(to bottom right, #ffffff 20%, var(--color-mint) 85%);
-  background-clip: text;
-  color: transparent;
-}
-
-/* Fine grid texture overlay for the aurora background */
-@utility bg-grid-mint {
-  background-image:
-    linear-gradient(to right, rgba(110, 231, 183, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(110, 231, 183, 0.05) 1px, transparent 1px);
-  background-size: 48px 48px;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-}
-
-::selection {
-  background: rgba(16, 185, 129, 0.35);
-  color: #ffffff;
-}
-
-/* Respect users who prefer calm — kill all ambient loops */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+  body {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  section[id] {
+    scroll-margin-top: 96px;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-coral-400);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: var(--color-coral-500);
+    color: #fff;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Typography scale (design.md §1.2) */
+@utility text-hero {
+  font-size: clamp(2.75rem, 4.4vw + 0.75rem, 4.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+}
+@utility text-section {
+  font-size: clamp(2.25rem, 3.4vw + 0.5rem, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+@utility text-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@utility text-lead {
+  font-size: clamp(1.125rem, 0.4vw + 1rem, 1.25rem);
+  line-height: 1.6;
+}
+
+/* Section rhythm — very generous (design.md §1.3) */
+@utility section-pad {
+  padding-block: 6rem;
+  @variant md {
+    padding-block: 8rem;
+  }
+  @variant lg {
+    padding-block: 11rem;
+  }
+}
+
+/* Decorative coral blobs (aria-hidden) */
+@utility blob {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, var(--color-coral-400), var(--color-coral-500) 60%);
+}
+
+/* Underline-draw links */
+@utility link-draw {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 1.5px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 250ms var(--ease-out-expo);
+  }
+  &:hover::after,
+  &:focus-visible::after {
+    transform: scaleX(1);
+  }
+}
+
+/* SplitText line masks */
+.split-line {
+  overflow: clip;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+/* Native details accordion marker reset */
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
 }
