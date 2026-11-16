@@ -15,6 +15,16 @@ type FieldErrors = Partial<Record<"name" | "email" | "profession", string>>;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+export const WAITLIST_DIALOG_ID = "waitlist-dialog";
+
+/**
+ * Invoker Commands: lets every waitlist button open the dialog natively, even before React has
+ * hydrated (slow phones took ~6s to hydrate). After hydration the click handler runs first and
+ * opens it with animation; the native command then sees an open dialog and does nothing.
+ * Older browsers without Invoker Commands fall back to that click handler.
+ */
+export const openWaitlistAttrs = { commandfor: WAITLIST_DIALOG_ID, command: "show-modal" } as Record<string, string>;
+
 const WaitlistContext = createContext<{ open: (o: OpenOptions) => void } | null>(null);
 
 export function useWaitlist() {
@@ -75,6 +85,7 @@ export function WaitlistProvider({ children }: { children: ReactNode }) {
     <WaitlistContext.Provider value={{ open }}>
       {children}
       <dialog
+        id={WAITLIST_DIALOG_ID}
         ref={dialogRef}
         aria-labelledby="waitlist-title"
         aria-describedby="waitlist-desc"
@@ -84,7 +95,11 @@ export function WaitlistProvider({ children }: { children: ReactNode }) {
         <div ref={panelRef} className="relative rounded-frame bg-white p-7 text-ink shadow-[0_40px_80px_-20px_rgb(10_15_40/0.5)] sm:p-10">
           <button
             type="button"
-            onClick={close}
+            {...({ commandfor: WAITLIST_DIALOG_ID, command: "close" } as Record<string, string>)}
+            onClick={(e) => {
+              e.preventDefault(); // cancel the native close so the animated close can run
+              close();
+            }}
             aria-label="Close"
             className="absolute top-4 right-4 grid size-11 place-items-center rounded-full text-ink-muted transition-colors hover:bg-surface hover:text-ink"
           >

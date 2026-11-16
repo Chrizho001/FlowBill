@@ -7,7 +7,7 @@ import { plans } from "@/content/landing";
 import { gsap, MOTION, useGSAP } from "@/lib/gsap";
 import { useReveal } from "@/lib/use-reveal";
 import { cn, formatMoney, type Currency } from "@/lib/utils";
-import { useWaitlist } from "./waitlist-modal";
+import { openWaitlistAttrs, useWaitlist } from "./waitlist-modal";
 
 type Billing = "monthly" | "yearly";
 
@@ -132,7 +132,7 @@ export function Pricing() {
                     {amount === 0 ? "Free forever" : yearly ? "Per month, billed yearly" : "Per month"}
                   </p>
 
-                  <Button type="button" onClick={() => open({ source: `pricing-${p.id}` })} className="mt-8 px-9" aria-label={`Get started with ${p.name}`}>
+                  <Button type="button" {...openWaitlistAttrs} onClick={() => open({ source: `pricing-${p.id}` })} className="mt-8 px-9" aria-label={`Get started with ${p.name}`}>
                     Get started
                   </Button>
                 </div>

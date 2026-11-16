@@ -7,7 +7,7 @@ import { hero } from "@/content/landing";
 import { gsap, MOTION, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import { formatCompact } from "@/lib/utils";
 import { HeroDashboard, STAGE_H, STAGE_W } from "./hero-dashboard";
-import { useWaitlist } from "./waitlist-modal";
+import { openWaitlistAttrs, useWaitlist } from "./waitlist-modal";
 
 /* Small grey "moons" drifting in the navy field, as in the inspiration. Positions in %. */
 const MOONS = [
@@ -86,6 +86,8 @@ export function Hero() {
         tl.eventCallback("onComplete", () => {
           if (!pausedRef.current) drift.play();
         });
+        // Slow phones hydrate late: the hero is already visible, so don't hide and replay it.
+        if (performance.now() > 1500) tl.progress(1);
 
         ScrollTrigger.create({
           trigger: root.current,
@@ -151,7 +153,7 @@ export function Hero() {
           </h1>
           <p className="js-lead mt-6 max-w-[30rem] text-[1.0625rem] leading-relaxed text-navy-300 sm:text-[1.125rem]">{hero.lead}</p>
           <div className="js-cta mt-10">
-            <Button size="lg" className="px-9" onClick={() => open({ source: "hero" })}>
+            <Button size="lg" className="px-9" {...openWaitlistAttrs} onClick={() => open({ source: "hero" })}>
               {hero.cta}
             </Button>
           </div>

@@ -140,12 +140,12 @@ export function HowItWorks({
       const mm = gsap.matchMedia();
       mm.add(MOTION.ok, () => {
         gsap.from(".js-stage", {
-          y: 90,
+          y: 50,
           autoAlpha: 0,
-          duration: 1.2,
+          duration: 0.7,
           ease: "expo.out",
           clearProps: "transform,translate,opacity,visibility",
-          scrollTrigger: { trigger: ".js-stage", start: "top 85%", once: true },
+          scrollTrigger: { trigger: ".js-stage", start: "top 95%", once: true },
         });
       });
     },

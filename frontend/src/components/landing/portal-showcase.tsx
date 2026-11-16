@@ -9,7 +9,7 @@ import { gsap, MOTION, useGSAP } from "@/lib/gsap";
 import { useReveal } from "@/lib/use-reveal";
 import { formatMoney } from "@/lib/utils";
 import { ClientScreen } from "./app-screens";
-import { useWaitlist } from "./waitlist-modal";
+import { openWaitlistAttrs, useWaitlist } from "./waitlist-modal";
 
 export function PortalShowcase({ hasImage }: { hasImage: boolean }) {
   const root = useRef<HTMLElement>(null);
@@ -20,11 +20,11 @@ export function PortalShowcase({ hasImage }: { hasImage: boolean }) {
     () => {
       const mm = gsap.matchMedia();
       mm.add(MOTION.ok, () => {
-        const tl = gsap.timeline({ scrollTrigger: { trigger: ".js-phone", start: "top 72%", once: true } });
-        tl.from(".js-phone", { y: 100, rotate: 4, autoAlpha: 0, duration: 1.3, ease: "expo.out" })
-          .from(".js-phone .js-sx", { y: 16, autoAlpha: 0, stagger: 0.08, duration: 0.6 }, 0.5)
-          .from(".js-connector", { scaleX: 0, duration: 0.6, stagger: 0.12, ease: "power3.inOut" }, 0.6)
-          .from(".js-callout", { autoAlpha: 0, y: 12, duration: 0.5, stagger: 0.12 }, 0.85);
+        const tl = gsap.timeline({ scrollTrigger: { trigger: ".js-phone", start: "top 92%", once: true } });
+        tl.from(".js-phone", { y: 60, rotate: 3, autoAlpha: 0, duration: 0.8, ease: "expo.out" })
+          .from(".js-phone .js-sx", { y: 12, autoAlpha: 0, stagger: 0.05, duration: 0.4 }, 0.25)
+          .from(".js-connector", { scaleX: 0, duration: 0.4, stagger: 0.08, ease: "power3.inOut" }, 0.3)
+          .from(".js-callout", { autoAlpha: 0, y: 10, duration: 0.35, stagger: 0.08 }, 0.45);
         // gentle parallax on the phone while the section scrolls by
         gsap.to(".js-phone-float", {
           y: -40,
@@ -109,7 +109,7 @@ export function PortalShowcase({ hasImage }: { hasImage: boolean }) {
             <p className="text-lead mt-4 max-w-lg text-navy-300">
               Clients abroad will be able to pay in USDT or USDC. You&apos;ll see the amount in your currency.
             </p>
-            <Button type="button" onClick={() => open({ source: "crypto", crypto: true })} variant="secondary-dark" className="mt-10">
+            <Button type="button" {...openWaitlistAttrs} onClick={() => open({ source: "crypto", crypto: true })} variant="secondary-dark" className="mt-10">
               Get crypto early access
             </Button>
           </div>

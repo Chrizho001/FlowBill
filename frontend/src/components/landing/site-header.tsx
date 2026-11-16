@@ -7,7 +7,7 @@ import { Logo } from "@/components/ui/logo";
 import { nav } from "@/content/landing";
 import { gsap, MOTION, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import { cn } from "@/lib/utils";
-import { useWaitlist } from "./waitlist-modal";
+import { openWaitlistAttrs, useWaitlist } from "./waitlist-modal";
 
 const CLEAR = "transform,translate,rotate,scale,opacity,visibility";
 
@@ -86,12 +86,13 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-3 sm:gap-5">
           <button
             type="button"
+            {...openWaitlistAttrs}
             onClick={login}
             className="js-nav-item link-draw hidden py-2 text-[0.9375rem] font-medium text-white sm:inline-block"
           >
             Log in
           </button>
-          <Button variant="white" arrow={false} onClick={signup} className="js-nav-item hidden h-11 px-6 text-[0.9375rem] sm:inline-flex">
+          <Button variant="white" arrow={false} {...openWaitlistAttrs} onClick={signup} className="js-nav-item hidden h-11 px-6 text-[0.9375rem] sm:inline-flex">
             Sign up
           </Button>
           <button
@@ -124,10 +125,10 @@ export function SiteHeader() {
               ))}
             </ul>
             <div className="js-menu-link mt-auto grid gap-3 pt-12">
-              <Button variant="white" size="lg" arrow={false} className="w-full" onClick={signup}>
+              <Button variant="white" size="lg" arrow={false} className="w-full" {...openWaitlistAttrs} onClick={signup}>
                 Sign up
               </Button>
-              <Button variant="secondary-dark" size="lg" arrow={false} className="w-full" onClick={login}>
+              <Button variant="secondary-dark" size="lg" arrow={false} className="w-full" {...openWaitlistAttrs} onClick={login}>
                 Log in
               </Button>
             </div>

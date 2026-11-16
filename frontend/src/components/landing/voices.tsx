@@ -8,7 +8,7 @@ import { founderNote, testimonials, type Testimonial } from "@/content/landing";
 import { gsap, MOTION, ScrollTrigger, SplitText, useGSAP } from "@/lib/gsap";
 import { useReveal } from "@/lib/use-reveal";
 import { cn } from "@/lib/utils";
-import { useWaitlist } from "./waitlist-modal";
+import { openWaitlistAttrs, useWaitlist } from "./waitlist-modal";
 
 /**
  * Testimonial carousel (design.md §3.7). Items are SAMPLES with generated portraits: they show in
@@ -167,6 +167,7 @@ export function Voices({ photos }: { photos: Record<string, boolean> }) {
             <Button
               size="lg"
               className="px-9"
+              {...openWaitlistAttrs}
               onClick={() => open({ source: "voices" })}
             >
               Get early access

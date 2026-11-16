@@ -26,9 +26,9 @@ export function Insights() {
       const mm = gsap.matchMedia();
       mm.add(MOTION.ok, () => {
         const tl = gsap.timeline({
-          scrollTrigger: { trigger: ".js-dash", start: "top 75%", once: true },
+          scrollTrigger: { trigger: ".js-dash", start: "top 92%", once: true },
         });
-        tl.from(".js-dash", { y: 60, autoAlpha: 0, duration: 1, ease: "expo.out" });
+        tl.from(".js-dash", { y: 40, autoAlpha: 0, duration: 0.6, ease: "expo.out" });
 
         root.current?.querySelectorAll<HTMLElement>(".js-count").forEach((el) => {
           const target = Number(el.dataset.value);
@@ -38,17 +38,17 @@ export function Insights() {
             o,
             {
               v: target,
-              duration: 1.2,
+              duration: 0.9,
               ease: "power2.out",
               onUpdate: () => {
                 el.textContent = plain ? String(Math.round(o.v)) : formatCompact(o.v);
               },
             },
-            0.3,
+            0.15,
           );
         });
-        tl.from(".js-bar", { scaleY: 0, transformOrigin: "bottom center", duration: 0.9, stagger: 0.07, ease: "expo.out" }, 0.4);
-        tl.from(".js-share", { scaleX: 0, transformOrigin: "left center", duration: 0.9, stagger: 0.08, ease: "expo.out" }, 0.6);
+        tl.from(".js-bar", { scaleY: 0, transformOrigin: "bottom center", duration: 0.6, stagger: 0.05, ease: "expo.out" }, 0.2);
+        tl.from(".js-share", { scaleX: 0, transformOrigin: "left center", duration: 0.6, stagger: 0.05, ease: "expo.out" }, 0.3);
       });
     },
     { scope: root },

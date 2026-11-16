@@ -5,7 +5,7 @@ import { finalCta } from "@/content/landing";
 import { gsap, MOTION, useGSAP } from "@/lib/gsap";
 import { useReveal } from "@/lib/use-reveal";
 import { Button } from "@/components/ui/button";
-import { useWaitlist } from "./waitlist-modal";
+import { openWaitlistAttrs, useWaitlist } from "./waitlist-modal";
 
 export function FinalCta() {
   const root = useRef<HTMLElement>(null);
@@ -20,9 +20,9 @@ export function FinalCta() {
         gsap.from(".js-drift", {
           scale: 0.6,
           autoAlpha: 0,
-          duration: 1.4,
+          duration: 0.9,
           ease: "expo.out",
-          scrollTrigger: { trigger: root.current, start: "top 70%", once: true },
+          scrollTrigger: { trigger: root.current, start: "top 90%", once: true },
         });
       });
     },
@@ -46,7 +46,7 @@ export function FinalCta() {
           </h2>
           <p className="js-fade text-lead mt-8 max-w-xl text-navy-300">{finalCta.lead}</p>
           <div className="js-fade mt-12">
-            <Button size="lg" className="px-9" onClick={() => open({ source: "join" })}>
+            <Button size="lg" className="px-9" {...openWaitlistAttrs} onClick={() => open({ source: "join" })}>
               Get early access
             </Button>
           </div>
