@@ -1,0 +1,8 @@
+# Agent tooling and local-only files — not part of the deployed site
+.agents
+.claude
+data
+docs
+design.md
+CLAUDE.md
+AGENTS.md
