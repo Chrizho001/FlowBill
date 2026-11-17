@@ -1,17 +1,86 @@
 import { cn } from "@/lib/utils";
 
-/** FlowBill wordmark: Space Grotesk 700 with a coral payment dot. */
-export function Logo({ className, tone = "ink" }: { className?: string; tone?: "ink" | "white" }) {
+/**
+ * Standalone "Ledger Fold" logomark:
+ * An isometric folded invoice sheet forming an architectural "F",
+ * paired with a coral payment crossbar and settlement node.
+ */
+export function LogoMark({
+  className,
+  tone = "ink",
+}: {
+  className?: string;
+  tone?: "ink" | "white";
+}) {
+  const isLightOnDark = tone === "white";
+  return (
+    <svg
+      viewBox="0 0 36 36"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className={cn(" inline-block shrink-0 select-none", className)}
+    >
+      {/* Squircle ledger container */}
+      <rect
+        x="0.75"
+        y="0.75"
+        width="34.5"
+        height="34.5"
+        rx="9.5"
+        // On navy (#27325E) the tile needs a lighter fill + faint white edge to stay visible.
+        fill={isLightOnDark ? "#323F74" : "#1A2347"}
+        stroke={isLightOnDark ? "rgb(255 255 255 / 0.16)" : "#27325E"}
+        strokeWidth="1.5"
+      />
+      {/* Left vertical spine + 45deg folded invoice bevel */}
+      <path
+        d="M10 9.5C10 8.67157 10.6716 8 11.5 8H20.2L15.2 13.5H15V26.5C15 27.3284 14.3284 28 13.5 28H11.5C10.6716 28 10 27.3284 10 26.5V9.5Z"
+        fill="#FFFFFF"
+      />
+      {/* Top folded invoice ribbon */}
+      <path
+        className="transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/logo:translate-x-[0.5px] group-hover/logo:-translate-y-[0.5px] motion-reduce:transition-none"
+        d="M16 8H21.2C21.7523 8 22.2 8.44772 22.2 9V12C22.2 12.5523 21.7523 13 21.2 13H17.4L16 8Z"
+        fill="#FFFFFF"
+        fillOpacity="0.92"
+      />
+      {/* Coral payment crossbar ("Sent -> Paid") */}
+      <path
+        className="transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/logo:translate-x-[1.25px] motion-reduce:transition-none"
+        d="M17.2 16.5H23.8C25.1807 16.5 26.3 17.6193 26.3 19C26.3 20.3807 25.1807 21.5 23.8 21.5H17.2V16.5Z"
+        fill="#F2545B"
+      />
+      {/* Coral settlement node */}
+      <circle cx="25.5" cy="10.5" r="2.5" fill="#F2545B" />
+    </svg>
+  );
+}
+
+/** FlowBill lockup: The Ledger Fold mark + Space Grotesk 700 wordmark with coral terminal dot. */
+export function Logo({
+  className,
+  tone = "ink",
+}: {
+  className?: string;
+  tone?: "ink" | "white";
+}) {
   return (
     <span
       className={cn(
-        "inline-flex items-baseline font-display font-bold tracking-[-0.03em]",
+        "group/logo inline-flex items-center gap-[0.38em] font-display leading-none font-bold tracking-[-0.035em]",
         tone === "white" ? "text-white" : "text-ink",
         className,
       )}
     >
-      Flow<span className="relative">Bill</span>
-      <span aria-hidden className="ml-[0.12em] inline-block size-[0.32em] rounded-full bg-coral-500" />
+      <LogoMark tone={tone} className="size-[1.32em]" />
+      <span className="inline-flex items-baseline">
+        Flow<span>Bill</span>
+        <span
+          aria-hidden="true"
+          className="ml-[0.1em] inline-block size-[0.26em] rounded-full bg-coral-500"
+        />
+      </span>
     </span>
   );
 }

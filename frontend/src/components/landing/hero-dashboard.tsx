@@ -9,6 +9,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { LogoMark } from "@/components/ui/logo";
 import { heroDashboard as d } from "@/content/landing";
 import { formatCompact, formatMoney } from "@/lib/utils";
 
@@ -28,7 +29,7 @@ export function HeroDashboard() {
         {/* Desktop dashboard */}
         <div className="js-dash absolute top-[40px] left-[235px] flex h-[560px] w-[760px] overflow-hidden rounded-[24px] bg-white shadow-[0_50px_100px_-30px_rgb(8_12_35/0.6)]">
           <aside className="flex w-[72px] shrink-0 flex-col items-center gap-7 border-r border-line py-6 text-ink-muted">
-            <span className="grid size-9 place-items-center rounded-full bg-coral-500 font-display text-[15px] font-bold text-white">F</span>
+            <LogoMark tone="ink" className="size-9" />
             <LayoutDashboard className="size-[18px] text-ink" />
             <FileText className="size-[18px]" />
             <Users className="size-[18px]" />
