@@ -347,7 +347,12 @@ class RefreshTokenView(APIView):
     """
     POST /api/v1/auth/refresh/
     Issues a new access token using the refresh token from the HttpOnly cookie.
+
+    Identity comes only from the refresh token. Header authentication is disabled:
+    clients call this exactly when their access token has expired, and a stale or
+    foreign Authorization header must neither reject the call nor change the user.
     """
+    authentication_classes = []
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "auth_refresh"
@@ -373,14 +378,11 @@ class RefreshTokenView(APIView):
             User = get_user_model()
             token = RefreshToken(refresh_token)
 
-            if request.user and request.user.is_authenticated:
-                user = request.user
-            else:
-                user_id = token.payload.get(api_settings.USER_ID_CLAIM)
-                try:
-                    user = User.objects.get(id=user_id, is_active=True)
-                except (User.DoesNotExist, ValueError, TypeError):
-                    raise TokenError("User not found or inactive.")
+            user_id = token.payload.get(api_settings.USER_ID_CLAIM)
+            try:
+                user = User.objects.get(id=user_id, is_active=True)
+            except (User.DoesNotExist, ValueError, TypeError):
+                raise TokenError("User not found or inactive.")
 
             new_refresh = RefreshToken.for_user(user)
             new_access_token = str(new_refresh.access_token)

@@ -304,6 +304,56 @@ class TestRefreshTokenView:
         assert response.status_code == 401
         assert response.json()["code"] == "REFRESH_TOKEN_MISSING"
 
+    def test_refresh_succeeds_when_an_expired_access_token_is_sent(self, api_client, verified_user):
+        """Clients refresh precisely when their access token has expired; a stale
+        Authorization header must not cause JWT authentication to reject the call."""
+        from datetime import timedelta
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        login_res = api_client.post("/api/v1/auth/login/", {
+            "email": verified_user.email,
+            "password": "SecurePass123!",
+        }, format="json")
+        assert login_res.status_code == 200
+
+        expired = AccessToken.for_user(verified_user)
+        expired.set_exp(lifetime=-timedelta(minutes=1))
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {expired}")
+
+        refresh_res = api_client.post(self.url)
+
+        assert refresh_res.status_code == 200
+        assert "access" in refresh_res.json()["data"]
+
+    def test_refresh_issues_tokens_for_the_refresh_cookie_user_not_the_header_user(
+        self, api_client, verified_user
+    ):
+        """Identity comes only from the refresh token. A valid access token for a
+        different user in the Authorization header must not change who is refreshed."""
+        from rest_framework_simplejwt.settings import api_settings
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        other_user = User.objects.create_user(
+            email="other@example.com",
+            password="SecurePass123!",
+            full_name="Other User",
+        )
+        other_user.is_verified = True
+        other_user.save()
+
+        login_res = api_client.post("/api/v1/auth/login/", {
+            "email": verified_user.email,
+            "password": "SecurePass123!",
+        }, format="json")
+        assert login_res.status_code == 200
+
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(other_user)}")
+        refresh_res = api_client.post(self.url)
+
+        assert refresh_res.status_code == 200
+        new_access = AccessToken(refresh_res.json()["data"]["access"])
+        assert str(new_access[api_settings.USER_ID_CLAIM]) == str(verified_user.id)
+
 
 @pytest.mark.django_db
 class TestSecurityHardeningAuth:
