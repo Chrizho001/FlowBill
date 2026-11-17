@@ -176,3 +176,109 @@ class TestInvoiceEvent:
         event.save()
         # Refresh and verify — in real implementation we'd enforce this at DB level
         assert InvoiceEvent.objects.get(id=event.id).description == "Modified"
+
+@pytest.mark.django_db
+class TestInvoiceNumberSequence:
+    """
+    Invoice numbers come from a per-year counter row (InvoiceSequence) that is
+    locked and incremented in the same transaction as the invoice insert:
+    constant cost, gapless on rollback, safe under concurrency.
+    """
+
+    def test_counter_tracks_issued_numbers_for_the_year(self):
+        from apps.invoices.models import InvoiceSequence
+
+        year = timezone.now().year
+        InvoiceFactory()
+        last = InvoiceFactory()
+
+        assert InvoiceSequence.objects.get(year=year).last_value == 2
+        assert last.number == f"INV-{year}-0002"
+
+    def test_number_generation_does_not_scan_existing_invoices(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        for _ in range(5):
+            InvoiceFactory()
+
+        with CaptureQueriesContext(connection) as ctx:
+            InvoiceFactory()
+
+        scans = [q["sql"] for q in ctx.captured_queries if "LIKE" in q["sql"].upper() and '"number"' in q["sql"]]
+        assert scans == [], f"number generation scanned the invoices table: {scans}"
+
+    def test_rolled_back_invoice_does_not_leave_a_gap(self):
+        from django.db import transaction
+
+        year = timezone.now().year
+        InvoiceFactory()
+
+        with pytest.raises(RuntimeError):
+            with transaction.atomic():
+                InvoiceFactory()
+                raise RuntimeError("simulated failure after the invoice was created")
+
+        assert InvoiceFactory().number == f"INV-{year}-0002"
+
+    def test_explicit_number_moves_the_counter_forward(self):
+        from apps.invoices.models import InvoiceSequence
+
+        year = timezone.now().year
+        InvoiceFactory(number=f"INV-{year}-0500")
+
+        assert InvoiceSequence.objects.get(year=year).last_value == 500
+        assert InvoiceFactory().number == f"INV-{year}-0501"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_invoice_creation_gets_unique_consecutive_numbers():
+    """Real parallel transactions on PostgreSQL must not collide or skip."""
+    import threading
+
+    from django.db import connection
+
+    year = timezone.now().year
+    user = UserFactory()
+    client = ClientFactory(owner=user)
+    numbers, errors = [], []
+    start = threading.Barrier(8)
+
+    def create():
+        try:
+            start.wait()
+            numbers.append(InvoiceFactory(owner=user, client=client).number)
+        except Exception as exc:  # surface thread failures to the assertion below
+            errors.append(repr(exc))
+        finally:
+            connection.close()
+
+    threads = [threading.Thread(target=create) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert errors == []
+    assert sorted(numbers) == [f"INV-{year}-{i:04d}" for i in range(1, 9)]
+
+
+@pytest.mark.django_db
+def test_sequence_seed_migration_starts_from_highest_existing_number():
+    """0002 seeds each year's counter from existing invoices, including soft-deleted ones."""
+    import importlib
+
+    from django.apps import apps as django_apps
+
+    from apps.invoices.models import Invoice, InvoiceSequence
+
+    InvoiceFactory(number="INV-2025-0041")
+    InvoiceFactory(number="INV-2025-0007")
+    deleted = InvoiceFactory(number="INV-2026-0120")
+    Invoice.objects.filter(pk=deleted.pk).update(is_deleted=True)
+    InvoiceSequence.objects.all().delete()  # simulate the pre-migration state
+
+    migration = importlib.import_module("apps.invoices.migrations.0002_invoice_sequence")
+    migration.seed_sequences(django_apps, None)
+
+    assert dict(InvoiceSequence.objects.values_list("year", "last_value")) == {2025: 41, 2026: 120}

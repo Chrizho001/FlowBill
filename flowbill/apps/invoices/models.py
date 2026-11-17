@@ -1,3 +1,5 @@
+import re
+
 import structlog
 from decimal import Decimal
 from django.db import models
@@ -43,6 +45,54 @@ EVENT_TYPE_CHOICES = [
     ("overdue", "Marked Overdue"),
     ("duplicated", "Duplicated"),
 ]
+
+
+INVOICE_NUMBER_RE = re.compile(r"^INV-(?P<year>\d{4})-(?P<seq>\d+)$")
+
+
+def format_invoice_number(year: int, seq: int) -> str:
+    """INV-YYYY-XXXX, zero-padded to 4 digits and growing past 9999."""
+    return f"INV-{year}-{seq:04d}"
+
+
+class InvoiceSequence(models.Model):
+    """
+    Per-year invoice number counter (INV-YYYY-XXXX is sequential per year, globally).
+
+    One row per year is row-locked and incremented in the same transaction as the
+    invoice insert, so allocation is O(1), concurrent creates queue on a single row
+    instead of scanning/locking every invoice, and a rolled-back create releases its
+    number (no gaps). Infrastructure table, not tenant data: it deliberately does not
+    inherit BaseModel (no owner, soft delete or UUID key).
+    """
+
+    year = models.PositiveIntegerField(primary_key=True)
+    last_value = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "invoice_sequences"
+
+    def __str__(self):
+        return f"{self.year}: {self.last_value}"
+
+    @classmethod
+    def _ensure_row(cls, year: int) -> None:
+        # INSERT ... ON CONFLICT DO NOTHING: safe when two transactions start a new year at once.
+        cls.objects.bulk_create([cls(year=year, last_value=0)], ignore_conflicts=True)
+
+    @classmethod
+    def next_value(cls, year: int) -> int:
+        """Increment and return the year's counter. Must run inside a transaction."""
+        cls._ensure_row(year)
+        # UPDATE takes the row lock; concurrent callers wait here until we commit.
+        cls.objects.filter(year=year).update(last_value=models.F("last_value") + 1)
+        return cls.objects.values_list("last_value", flat=True).get(year=year)
+
+    @classmethod
+    def advance_to(cls, year: int, seq: int) -> None:
+        """Make sure the counter is at least `seq` (for explicitly numbered invoices)."""
+        cls._ensure_row(year)
+        cls.objects.filter(year=year, last_value__lt=seq).update(last_value=seq)
 
 
 class Invoice(BaseModel):
@@ -114,48 +164,24 @@ class Invoice(BaseModel):
             return False
         return self.due_date < date.today()
 
-    def generate_number(self):
-        """
-        Auto-generates invoice number in format INV-YYYY-XXXX.
-        Sequential per year across all invoices — not per user.
-        Uses integer sequence extraction rather than lexicographic string Max
-        so sequences above 9999 sort accurately.
-        """
-        from django.db import connection
-
-        year = timezone.now().year
-        prefix = f"INV-{year}-"
-
-        qs = Invoice.objects.filter(number__startswith=prefix)
-        if connection.in_atomic_block:
-            qs = qs.select_for_update()
-
-        existing_numbers = qs.values_list("number", flat=True)
-        max_seq = 0
-        for num in existing_numbers:
-            try:
-                seq = int(num.rsplit("-", 1)[-1])
-                if seq > max_seq:
-                    max_seq = seq
-            except (ValueError, IndexError):
-                continue
-
-        next_seq = max_seq + 1
-        return f"{prefix}{next_seq:04d}"
-
     def save(self, *args, **kwargs):
-        from django.db import IntegrityError, transaction
+        from django.db import transaction
 
         if not self.number:
-            for attempt in range(5):
-                try:
-                    with transaction.atomic():
-                        self.number = self.generate_number()
-                        return super().save(*args, **kwargs)
-                except IntegrityError:
-                    self.number = ""
-                    if attempt == 4:
-                        raise
+            # Allocate and insert in one transaction: the counter row stays locked
+            # until commit, and a failed insert rolls the increment back (gapless).
+            with transaction.atomic():
+                year = timezone.now().year
+                self.number = format_invoice_number(year, InvoiceSequence.next_value(year))
+                return super().save(*args, **kwargs)
+
+        if self._state.adding:
+            # Explicit number on create (imports, fixtures): keep the counter ahead of it.
+            match = INVOICE_NUMBER_RE.match(self.number)
+            if match:
+                with transaction.atomic():
+                    InvoiceSequence.advance_to(int(match["year"]), int(match["seq"]))
+                    return super().save(*args, **kwargs)
         return super().save(*args, **kwargs)
 
 
