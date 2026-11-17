@@ -333,6 +333,13 @@
       color: #4F46E5;
       font-weight: 700;
     }
+
+    .brand-logo {
+      max-height: 48px;
+      max-width: 160px;
+      object-fit: contain;
+      margin-right: 12px;
+    }
   </style>
 </head>
 <body>
@@ -341,8 +348,13 @@
   <!-- Header -->
   <div class="header">
     <div class="brand">
+      {% if logo_data_uri %}
+      <img class="brand-logo" src="{{ logo_data_uri }}" alt="">
+      <div class="brand-name">{{ owner_profile.business_name|default:owner.full_name }}</div>
+      {% else %}
       <div class="brand-icon">⚡</div>
       <div class="brand-name">FlowBill</div>
+      {% endif %}
     </div>
     <div class="invoice-badge">
       <div class="label">Invoice</div>

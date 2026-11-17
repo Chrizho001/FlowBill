@@ -96,6 +96,14 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# ─── Business logo uploads ───────────────────────────────────────────────────
+# Logos are uploaded (never hot-linked), validated, re-encoded to PNG and embedded
+# into invoice PDFs as data: URIs, so PDF rendering needs no network access.
+LOGO_MAX_UPLOAD_BYTES = 1024 * 1024          # 1 MB upload limit
+LOGO_MAX_SOURCE_PIXELS = 4000 * 4000         # reject before decoding (decompression bombs)
+LOGO_MAX_DIMENSION = 600                     # stored logo is at most 600×600
+LOGO_ALLOWED_FORMATS = ("PNG", "JPEG", "WEBP")  # no SVG (external refs) or GIF
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"

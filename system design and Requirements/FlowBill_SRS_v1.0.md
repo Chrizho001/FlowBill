@@ -105,10 +105,11 @@ Data multi-tenancy is implemented using **row-level ownership scoping** (`owner_
 
 | ID | Requirement | Priority | TDD Test Type |
 | --- | --- | --- | --- |
-| **PROF-001** | System shall maintain a 1:1 `BusinessProfile` for each user containing business name, phone, address, city, state, country, tax ID, and logo URL. | Critical | Unit + Integration |
+| **PROF-001** | System shall maintain a 1:1 `BusinessProfile` for each user containing business name, phone, address, city, state, country, tax ID, and an uploaded logo image. | Critical | Unit + Integration |
 | **PROF-002** | System shall allow users to retrieve and update their `BusinessProfile` via `GET/PUT /api/v1/auth/profile/`. | Critical | Integration |
 | **PROF-003** | System shall store default payment instructions and bank details (bank name, account name, account number) on the `BusinessProfile` for rendering onto invoices. | High | Unit + Integration |
 | **PROF-004** | System shall allow users to configure their default currency (e.g. USD, NGN, GBP, EUR) and default payment terms in their profile. | Medium | Unit |
+| **PROF-005** | System shall accept business logo uploads via `POST /api/v1/auth/profile/logo/` (PNG, JPEG or WebP, ≤ 1 MB, ≤ 16 MP source), re-encode them to PNG (metadata stripped, ≤ 600 px) and allow removal via `DELETE`. Logos are never fetched from user-supplied URLs. | High | Unit + Integration |
 
 ---
 
@@ -147,7 +148,7 @@ Data multi-tenancy is implemented using **row-level ownership scoping** (`owner_
 | ID | Requirement | Priority | TDD Test Type |
 | --- | --- | --- | --- |
 | **PDF-001** | System shall generate high-fidelity invoice PDFs using WeasyPrint from HTML/CSS templates. | Critical | Integration |
-| **PDF-002** | Invoice PDF shall display tenant business branding (business name, logo, address, contact, tax ID) from `BusinessProfile`. | Critical | Integration |
+| **PDF-002** | Invoice PDF shall display tenant business branding (business name, logo, address, contact, tax ID) from `BusinessProfile`. The logo is embedded as a data URI; PDF rendering performs no network or filesystem fetches. | Critical | Integration |
 | **PDF-003** | Invoice PDF shall display client details, invoice number, issue/due dates, payment terms, and status badge. | Critical | Integration |
 | **PDF-004** | Invoice PDF shall itemize line items with quantity, unit price, tax rate, and calculate subtotal, taxes, discounts, and total. | Critical | Integration |
 | **PDF-005** | Invoice PDF shall include banking details and payment instructions configured on the tenant's profile. | High | Integration |
@@ -283,7 +284,7 @@ Data multi-tenancy is implemented using **row-level ownership scoping** (`owner_
 3. System sends verification email with magic link (`/verify-email?token=...`).
 4. User clicks link (`POST /api/v1/auth/verify-email/`); account is marked `is_verified=True`.
 5. User logs in (`POST /api/v1/auth/login/`), receiving JWT access & refresh tokens.
-6. User sets up `BusinessProfile` (business name, logo, address, bank details) via `PUT /api/v1/auth/profile/`.
+6. User sets up `BusinessProfile` (business name, address, bank details) via `PUT /api/v1/auth/profile/` and uploads a logo via `POST /api/v1/auth/profile/logo/`.
 
 ## Flow 2: Creating & Dispatching an Invoice
 1. User creates or selects a `Client` (`POST /api/v1/clients/`).

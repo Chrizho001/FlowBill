@@ -1,6 +1,5 @@
-import ipaddress
-import socket
-from urllib.parse import urlparse
+import base64
+
 import structlog
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -18,41 +17,19 @@ class PDFService:
     TEMPLATE = "invoices/invoice_pdf.html"
 
     @staticmethod
-    def _safe_url_fetcher(url: str):
+    def url_fetcher():
         """
-        Restricted URL fetcher for WeasyPrint that prevents SSRF and local file
-        disclosure (blocks file://, localhost, private RFC1918, link-local /
-        cloud metadata IPs).
+        WeasyPrint fetcher that only resolves embedded data: URIs.
+
+        The template never references external resources (styles are inline and the
+        tenant logo is embedded as a data: URI), so rendering needs no network or
+        filesystem access. Refusing every other protocol closes SSRF and local-file
+        disclosure outright, including DNS-rebinding tricks that an "allow public
+        IPs" check cannot stop.
         """
-        from weasyprint import default_url_fetcher
+        from weasyprint.urls import URLFetcher
 
-        parsed = urlparse(url)
-        if parsed.scheme not in ("http", "https"):
-            raise ValueError(f"Blocked URL scheme in PDF rendering: {parsed.scheme!r}")
-
-        hostname = parsed.hostname
-        if not hostname or hostname.lower() in ("localhost", "localhost.localdomain"):
-            raise ValueError("Blocked local hostname in PDF rendering.")
-
-        try:
-            addr_infos = socket.getaddrinfo(hostname, None)
-        except socket.gaierror as exc:
-            raise ValueError(f"Could not resolve host {hostname!r}") from exc
-
-        for family, _, _, _, sockaddr in addr_infos:
-            ip_str = sockaddr[0]
-            ip = ipaddress.ip_address(ip_str)
-            if (
-                ip.is_private
-                or ip.is_loopback
-                or ip.is_link_local
-                or ip.is_multicast
-                or ip.is_reserved
-                or ip.is_unspecified
-            ):
-                raise ValueError(f"Blocked non-public IP address in PDF rendering: {ip}")
-
-        return default_url_fetcher(url)
+        return URLFetcher(allowed_protocols={"data"}, allow_redirects=False, timeout=5)
 
     @staticmethod
     def generate_invoice_pdf(invoice) -> bytes:
@@ -81,7 +58,7 @@ class PDFService:
             html = HTML(
                 string=html_string,
                 base_url=str(settings.BASE_DIR),
-                url_fetcher=PDFService._safe_url_fetcher,
+                url_fetcher=PDFService.url_fetcher(),
             )
             pdf_bytes = html.write_pdf(font_config=font_config)
 
@@ -103,6 +80,19 @@ class PDFService:
             raise RuntimeError(f"PDF generation failed: {str(e)}")
 
     @staticmethod
+    def _logo_data_uri(profile) -> str | None:
+        """The stored (already re-encoded PNG) logo as a data: URI, or None."""
+        if not profile or not profile.logo:
+            return None
+        try:
+            with profile.logo.open("rb") as fh:
+                encoded = base64.b64encode(fh.read()).decode("ascii")
+        except (FileNotFoundError, OSError) as exc:
+            logger.warning("pdf.logo_missing", profile_id=str(profile.id), error=str(exc))
+            return None
+        return f"data:image/png;base64,{encoded}"
+
+    @staticmethod
     def _build_context(invoice) -> dict:
         """Builds the template context for the invoice PDF."""
         line_items = invoice.line_items.all()
@@ -117,6 +107,7 @@ class PDFService:
             "invoice": invoice,
             "owner": invoice.owner,
             "owner_profile": owner_profile,
+            "logo_data_uri": PDFService._logo_data_uri(owner_profile),
             "client": invoice.client,
             "line_items": line_items,
             "payment_instructions": payment_instructions,

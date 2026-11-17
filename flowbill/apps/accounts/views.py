@@ -3,12 +3,14 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
 from .serializers import (
+    LogoUploadSerializer,
     RegisterSerializer,
     LoginSerializer,
     VerifyEmailSerializer,
@@ -314,7 +316,7 @@ class BusinessProfileView(APIView):
         logger.info("auth.profile.retrieved", user_id=str(request.user.id), profile_id=str(profile.id))
         return Response({
             "status": "success",
-            "data": BusinessProfileSerializer(profile).data,
+            "data": BusinessProfileSerializer(profile, context={"request": request}).data,
         }, status=status.HTTP_200_OK)
 
     def put(self, request):
@@ -339,7 +341,35 @@ class BusinessProfileView(APIView):
         return Response({
             "status": "success",
             "message": "Business profile updated successfully.",
-            "data": BusinessProfileSerializer(profile).data,
+            "data": BusinessProfileSerializer(profile, context={"request": request}).data,
+        }, status=status.HTTP_200_OK)
+
+
+class BusinessProfileLogoView(APIView):
+    """
+    POST   /api/v1/auth/profile/logo/  multipart field "logo" (PNG, JPEG or WebP, max 1 MB)
+    DELETE /api/v1/auth/profile/logo/
+    Uploads or removes the business logo shown on invoice PDFs.
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        serializer = LogoUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = AccountsService.set_logo(request.user, serializer.validated_data["logo"])
+        return Response({
+            "status": "success",
+            "message": "Logo uploaded successfully.",
+            "data": BusinessProfileSerializer(profile, context={"request": request}).data,
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        profile = AccountsService.remove_logo(request.user)
+        return Response({
+            "status": "success",
+            "message": "Logo removed.",
+            "data": BusinessProfileSerializer(profile, context={"request": request}).data,
         }, status=status.HTTP_200_OK)
 
 

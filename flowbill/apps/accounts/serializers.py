@@ -191,7 +191,9 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 
 class BusinessProfileSerializer(serializers.ModelSerializer):
-    """Serializer for BusinessProfile CRUD."""
+    """Serializer for BusinessProfile CRUD. The logo is read-only here (upload via /profile/logo/)."""
+
+    logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = BusinessProfile
@@ -215,9 +217,54 @@ class BusinessProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "created_at", "updated_at")
+        read_only_fields = ("id", "logo_url", "created_at", "updated_at")
+
+    def get_logo_url(self, obj):
+        if not obj.logo:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
 
     def validate_country(self, value):
         if value and len(value) != 2:
             raise serializers.ValidationError("Country must be a 2-letter ISO code.")
         return value.upper() if value else ""
+
+
+class LogoUploadSerializer(serializers.Serializer):
+    """
+    Validates a business logo upload: size, real image content, allowed format and
+    source dimensions, all checked before the image is decoded.
+    """
+
+    logo = serializers.FileField()
+
+    def validate_logo(self, file):
+        from django.conf import settings
+        from PIL import Image, UnidentifiedImageError
+
+        if file.size > settings.LOGO_MAX_UPLOAD_BYTES:
+            raise serializers.ValidationError(
+                f"Logo must be {settings.LOGO_MAX_UPLOAD_BYTES // 1024} KB or smaller."
+            )
+
+        allowed = ", ".join(f.replace("JPEG", "JPG") for f in settings.LOGO_ALLOWED_FORMATS)
+        try:
+            file.seek(0)
+            image = Image.open(file)  # reads the header only
+            fmt, (width, height) = image.format, image.size
+        except (UnidentifiedImageError, OSError, ValueError):
+            raise serializers.ValidationError(f"Upload a valid image file ({allowed}).")
+
+        if fmt not in settings.LOGO_ALLOWED_FORMATS:
+            raise serializers.ValidationError(f"Unsupported image type. Use {allowed}.")
+        if width * height > settings.LOGO_MAX_SOURCE_PIXELS:
+            raise serializers.ValidationError("Image dimensions are too large.")
+
+        try:
+            image.verify()  # integrity check; the image must be reopened afterwards
+        except Exception:
+            raise serializers.ValidationError(f"Upload a valid image file ({allowed}).")
+        finally:
+            file.seek(0)
+        return file

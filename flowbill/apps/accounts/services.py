@@ -260,6 +260,60 @@ class AccountsService:
         return profile
 
     @staticmethod
+    def set_logo(user: User, uploaded_file) -> BusinessProfile:
+        """
+        Re-encodes a validated logo upload to PNG and stores it on the profile.
+
+        Re-encoding strips all metadata (EXIF, GPS, comments) and any payload
+        hidden after the image data; the logo is shrunk to LOGO_MAX_DIMENSION.
+        Validation (size, format, dimensions) happens in LogoUploadSerializer.
+        """
+        import io
+
+        from django.conf import settings
+        from django.core.files.base import ContentFile
+        from PIL import Image, ImageOps
+
+        uploaded_file.seek(0)
+        with Image.open(uploaded_file) as source:
+            image = ImageOps.exif_transpose(source)  # honour camera orientation, then drop EXIF
+            has_alpha = image.mode in ("RGBA", "LA", "PA") or (
+                image.mode == "P" and "transparency" in image.info
+            )
+            image = image.convert("RGBA" if has_alpha else "RGB")
+            image.thumbnail((settings.LOGO_MAX_DIMENSION, settings.LOGO_MAX_DIMENSION))
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG", optimize=True)
+
+        profile = AccountsService.get_or_create_profile(user)
+        old_name = profile.logo.name if profile.logo else None
+        profile.logo.save("logo.png", ContentFile(buffer.getvalue()), save=False)
+        profile.save(update_fields=["logo", "updated_at"])
+        if old_name and old_name != profile.logo.name:
+            profile.logo.storage.delete(old_name)
+
+        logger.info(
+            "accounts.logo_updated",
+            user_id=str(user.id),
+            profile_id=str(profile.id),
+            size_bytes=len(buffer.getvalue()),
+            dimensions=f"{image.width}x{image.height}",
+        )
+        return profile
+
+    @staticmethod
+    def remove_logo(user: User) -> BusinessProfile:
+        """Deletes the profile's logo file and clears the field."""
+        profile = AccountsService.get_or_create_profile(user)
+        if profile.logo:
+            name = profile.logo.name
+            profile.logo.storage.delete(name)
+            profile.logo = ""
+            profile.save(update_fields=["logo", "updated_at"])
+            logger.info("accounts.logo_removed", user_id=str(user.id), profile_id=str(profile.id))
+        return profile
+
+    @staticmethod
     def _generate_verification_otp(user: User) -> str:
         """Generates a cryptographically random 6-digit numeric OTP."""
         otp = f"{secrets.randbelow(1000000):06d}"

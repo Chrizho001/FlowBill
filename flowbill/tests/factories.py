@@ -39,7 +39,6 @@ class BusinessProfileFactory(DjangoModelFactory):
 
     user = factory.SubFactory(UserFactory)
     business_name = factory.LazyAttribute(lambda _: fake.company())
-    logo_url = factory.LazyAttribute(lambda _: fake.image_url())
     phone = factory.LazyAttribute(lambda _: fake.phone_number()[:20])
     website = factory.LazyAttribute(lambda _: fake.url())
     address = factory.LazyAttribute(lambda _: fake.street_address())

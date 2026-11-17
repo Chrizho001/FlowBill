@@ -42,21 +42,6 @@ class TestInvoiceModel:
         next_invoice = InvoiceFactory(owner=user, client=client)
         assert next_invoice.number == f"INV-{year}-10001"
 
-    def test_pdf_safe_url_fetcher_blocks_ssrf_and_local_files(self):
-        from apps.invoices.pdf import PDFService
-
-        with pytest.raises(ValueError, match="Blocked URL scheme"):
-            PDFService._safe_url_fetcher("file:///etc/passwd")
-
-        with pytest.raises(ValueError, match="Blocked local hostname"):
-            PDFService._safe_url_fetcher("http://localhost:8000/secret")
-
-        with pytest.raises(ValueError, match="Blocked non-public IP"):
-            PDFService._safe_url_fetcher("http://127.0.0.1/admin")
-
-        with pytest.raises(ValueError, match="Blocked non-public IP"):
-            PDFService._safe_url_fetcher("http://169.254.169.254/latest/meta-data/")
-
     def test_invoice_default_status_is_draft(self):
         invoice = InvoiceFactory()
         assert invoice.status == "draft"

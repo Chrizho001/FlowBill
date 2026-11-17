@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    BusinessProfileLogoView,
     RegisterView,
     LoginView,
     LogoutView,
@@ -22,5 +23,6 @@ urlpatterns = [
     path("password-reset/", PasswordResetRequestView.as_view(), name="password-reset-request"),
     path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("profile/", BusinessProfileView.as_view(), name="profile"),
+    path("profile/logo/", BusinessProfileLogoView.as_view(), name="profile-logo"),
     path("refresh/", RefreshTokenView.as_view(), name="refresh"),
 ]

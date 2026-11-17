@@ -1,3 +1,5 @@
+import uuid
+
 import uuid6
 import structlog
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -96,6 +98,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         return " ".join(parts[1:]) if len(parts) > 1 else ""
 
 
+def logo_upload_to(instance, filename):
+    """Random, per-user path; the original filename is never used."""
+    return f"logos/{instance.user_id}/{uuid.uuid4().hex}.png"
+
+
 class BusinessProfile(BaseModel):
     """
     1:1 Business profile holding branding, contact info, tax ID, and banking details.
@@ -108,7 +115,8 @@ class BusinessProfile(BaseModel):
         related_name="profile",
     )
     business_name = models.CharField(max_length=255, blank=True, default="")
-    logo_url = models.URLField(blank=True, default="")
+    # Uploaded via POST /api/v1/auth/profile/logo/ (validated + re-encoded to PNG).
+    logo = models.ImageField(upload_to=logo_upload_to, blank=True, default="")
     phone = models.CharField(max_length=20, blank=True, default="")
     website = models.URLField(blank=True, default="")
     address = models.CharField(max_length=500, blank=True, default="")

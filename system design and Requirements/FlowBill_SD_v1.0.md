@@ -109,7 +109,7 @@ class BaseModel(UUIDModel, TimeStampedModel, SoftDeleteModel):
 │ id: UUID7 (PK)                        │                 │ id: UUID7 (PK)                        │
 │ email: EmailField (Unique, Index)     │                 │ user: OneToOneField(User, CASCADE)    │
 │ full_name: CharField(255)             │                 │ business_name: CharField(255)         │
-│ is_verified: BooleanField             │                 │ logo_url: URLField / ImageField       │
+│ is_verified: BooleanField             │                 │ logo: ImageField (uploaded PNG)       │
 │ is_active: BooleanField               │                 │ phone: CharField(20)                  │
 │ is_staff: BooleanField                │                 │ address, city, state, country: Char   │
 │ created_at / updated_at               │                 │ tax_id: CharField(50)                 │
@@ -217,7 +217,7 @@ class PaymentGatewayFactory:
 | Table Name | Model | Key Fields & Types | Indexes & Constraints |
 | --- | --- | --- | --- |
 | **`users`** | `User` | `id` (UUID7, PK), `email` (VarChar 255), `full_name`, `password`, `is_verified`, `is_active` | `UNIQUE(email)` |
-| **`business_profiles`** | `BusinessProfile` | `id` (UUID7, PK), `user_id` (FK, User), `business_name`, `logo_url`, `phone`, `tax_id`, `bank_details` | `UNIQUE(user_id)` |
+| **`business_profiles`** | `BusinessProfile` | `id` (UUID7, PK), `user_id` (FK, User), `business_name`, `logo` (uploaded PNG path), `phone`, `tax_id`, `bank_details` | `UNIQUE(user_id)` |
 | **`clients`** | `Client` | `id` (UUID7, PK), `owner_id` (FK, User), `name`, `email`, `company_name`, `currency`, `status`, `is_deleted` | `INDEX(owner_id, is_deleted)`, `UNIQUE(owner_id, email) WHERE is_deleted=False` |
 | **`invoices`** | `Invoice` | `id` (UUID7, PK), `owner_id` (FK, User), `client_id` (FK, Client), `number` (VarChar 20), `status`, `due_date`, `subtotal`, `tax_amount`, `discount_amount`, `total`, `is_deleted` | `UNIQUE(number)`, `INDEX(owner_id, is_deleted)`, `INDEX(owner_id, status)`, `INDEX(due_date)` |
 | **`invoice_line_items`** | `LineItem` | `id` (UUID7, PK), `invoice_id` (FK, Invoice), `description`, `quantity` (Decimal 10,2), `unit_price` (Decimal 12,2), `tax_rate` (Decimal 5,2), `total` (Decimal 12,2) | `INDEX(invoice_id)` |
@@ -298,6 +298,7 @@ All endpoints are rooted under `/api/v1/`:
 | `POST` | `/api/v1/auth/logout/` | Bearer | Blacklist refresh token and clear cookies |
 | `GET` | `/api/v1/auth/profile/` | Bearer | Retrieve user `BusinessProfile` details |
 | `PUT/PATCH` | `/api/v1/auth/profile/` | Bearer | Update business branding, address, tax ID, bank details |
+| `POST/DELETE` | `/api/v1/auth/profile/logo/` | Bearer | Upload (multipart `logo`: PNG/JPEG/WebP ≤ 1 MB) or remove the business logo |
 
 ### Clients (`/api/v1/clients/`)
 | Method | Endpoint | Auth | Description |
