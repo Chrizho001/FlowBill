@@ -102,6 +102,15 @@ class TestExpenseListCreateView:
         response = api_client.post(self.url, {"amount": "-100"}, format="json")
         assert response.status_code == 400
 
+    def test_cannot_attach_another_users_client_to_expense(self, auth_client):
+        api_client, user = auth_client
+        other_client = ClientFactory(owner=UserFactory())
+        payload = get_valid_payload()
+        payload["client"] = str(other_client.id)
+        response = api_client.post(self.url, payload, format="json")
+        assert response.status_code == 400
+        assert "client" in response.json()["fields"]
+
 
 @pytest.mark.django_db
 class TestExpenseRetrieveUpdateDeleteView:

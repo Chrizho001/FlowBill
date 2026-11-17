@@ -1,4 +1,5 @@
 import structlog
+from rest_framework.exceptions import Throttled
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
@@ -19,43 +20,64 @@ def flowbill_exception_handler(exc, context):
     }
     """
     response = exception_handler(exc, context)
+    request = context.get("request") if context else None
+    view = context.get("view") if context else None
 
-    if response is not None:
-        request = context.get("request")
-        view = context.get("view")
-
-        logger.warning(
-            "api.error",
-            status_code=response.status_code,
+    if response is None:
+        logger.error(
+            "api.unhandled_exception",
             exc_type=type(exc).__name__,
+            error=str(exc),
             path=request.path if request else None,
             view=type(view).__name__ if view else None,
+            exc_info=True,
+        )
+        return Response(
+            {
+                "status": "error",
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred.",
+                "fields": {},
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-        error_payload = {
-            "status": "error",
-            "code": _get_error_code(exc, response),
-            "message": _get_error_message(exc, response),
-            "fields": {},
-        }
+    logger.warning(
+        "api.error",
+        status_code=response.status_code,
+        exc_type=type(exc).__name__,
+        path=request.path if request else None,
+        view=type(view).__name__ if view else None,
+    )
 
-        # Validation errors — include field-level detail
-        if response.status_code == status.HTTP_400_BAD_REQUEST:
-            if hasattr(response, "data") and isinstance(response.data, dict):
-                fields = {}
-                for field, errors in response.data.items():
-                    if field not in ("detail", "non_field_errors"):
-                        fields[field] = (
-                            [str(e) for e in errors]
-                            if isinstance(errors, list)
-                            else [str(errors)]
-                        )
-                error_payload["fields"] = fields
-                if "non_field_errors" in response.data:
-                    error_payload["message"] = str(response.data["non_field_errors"][0])
-            error_payload["code"] = "VALIDATION_ERROR"
+    error_payload = {
+        "status": "error",
+        "code": _get_error_code(exc, response),
+        "message": _get_error_message(exc, response),
+        "fields": {},
+    }
 
-        response.data = error_payload
+    # Validation errors — include field-level detail
+    if response.status_code == status.HTTP_400_BAD_REQUEST:
+        if hasattr(response, "data") and isinstance(response.data, dict):
+            fields = {}
+            for field, errors in response.data.items():
+                if field not in ("detail", "non_field_errors"):
+                    fields[field] = (
+                        [str(e) for e in errors]
+                        if isinstance(errors, list)
+                        else [str(errors)]
+                    )
+            error_payload["fields"] = fields
+            if "non_field_errors" in response.data:
+                error_payload["message"] = str(response.data["non_field_errors"][0])
+        error_payload["code"] = "VALIDATION_ERROR"
+
+    response.data = error_payload
+
+    # Throttled responses — tell the client when the window resets
+    if response.status_code == 429 and isinstance(exc, Throttled) and exc.wait is not None:
+        response["Retry-After"] = str(int(exc.wait))
 
     return response
 

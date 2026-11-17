@@ -108,8 +108,18 @@ class ClientService:
         Soft deletes a client.
         Raises ValidationError if client has outstanding unpaid invoices.
         """
-        # Guard: prevent deletion if outstanding invoices exist
-        # (Invoice model doesn't exist yet — will be enforced when invoices are built)
+        from apps.invoices.models import Invoice
+
+        has_unpaid_invoices = Invoice.objects.filter(
+            client=client,
+            is_deleted=False,
+            status__in=("pending", "overdue"),
+        ).exists()
+        if has_unpaid_invoices:
+            raise serializers.ValidationError(
+                "Cannot delete a client with outstanding unpaid invoices."
+            )
+
         client.delete()
         logger.info(
             "clients.deleted",

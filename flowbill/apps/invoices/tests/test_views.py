@@ -262,6 +262,51 @@ class TestInvoiceActionsView:
         updated = Invoice.objects.get(id=invoice.id)
         assert updated.status == "paid"
 
+    def test_mark_paid_with_mismatched_amount_fails(self, auth_client):
+        api_client, user = auth_client
+        my_client = ClientFactory(owner=user)
+        invoice = InvoiceFactory(owner=user, client=my_client, status="pending", total=Decimal("1000.00"))
+        response = api_client.post(
+            f"/api/v1/invoices/{invoice.id}/mark-paid/",
+            {"paid_at": str(date.today()), "amount": "50.00"},
+            format="json"
+        )
+        assert response.status_code == 400
+        assert "amount" in response.json()["fields"]
+
+    def test_discount_exceeding_total_fails(self, client_with_client):
+        api_client, user, my_client = client_with_client
+        payload = get_invoice_payload(my_client.id)
+        payload["discount_amount"] = "2500.00"
+        response = api_client.post("/api/v1/invoices/", payload, format="json")
+        assert response.status_code == 400
+        assert "discount_amount" in response.json()["fields"]
+
+    def test_update_invoice_client_ownership_validated(self, auth_client):
+        api_client, user = auth_client
+        my_client = ClientFactory(owner=user)
+        my_second_client = ClientFactory(owner=user)
+        other_client = ClientFactory(owner=UserFactory())
+        invoice = InvoiceFactory(owner=user, client=my_client, status="draft")
+
+        # Reassigning to another user's client fails with 400
+        bad_res = api_client.patch(
+            f"/api/v1/invoices/{invoice.id}/",
+            {"client": str(other_client.id)},
+            format="json",
+        )
+        assert bad_res.status_code == 400
+
+        # Reassigning to own second client succeeds
+        ok_res = api_client.patch(
+            f"/api/v1/invoices/{invoice.id}/",
+            {"client": str(my_second_client.id)},
+            format="json",
+        )
+        assert ok_res.status_code == 200
+        invoice.refresh_from_db()
+        assert invoice.client_id == my_second_client.id
+
     def test_duplicate_invoice_creates_new_draft(self, auth_client):
         api_client, user = auth_client
         my_client = ClientFactory(owner=user)

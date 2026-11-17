@@ -1,6 +1,8 @@
 import re
 import structlog
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password as django_validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -11,14 +13,18 @@ logger = structlog.get_logger(__name__)
 User = get_user_model()
 
 
-def validate_password_strength(value: str) -> str:
-    """Reusable password strength validator."""
+def validate_password_strength(value: str, user=None) -> str:
+    """Reusable password strength validator combined with Django's AUTH_PASSWORD_VALIDATORS."""
     if len(value) < 8:
         raise serializers.ValidationError("Password must be at least 8 characters long.")
     if not re.search(r"\d", value):
         raise serializers.ValidationError("Password must contain at least one number.")
     if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
         raise serializers.ValidationError("Password must contain at least one special character.")
+    try:
+        django_validate_password(value, user=user)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError(list(exc.messages))
     return value
 
 
@@ -46,6 +52,14 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"confirm_password": "Passwords do not match."}
             )
+        candidate_user = User(
+            email=attrs.get("email", ""),
+            full_name=attrs.get("full_name", ""),
+        )
+        try:
+            django_validate_password(attrs["password"], user=candidate_user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)})
         return attrs
 
 
@@ -165,6 +179,14 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"confirm_password": "Passwords do not match."}
             )
+        candidate_user = User(
+            email=attrs.get("email", ""),
+            full_name=attrs.get("full_name", ""),
+        )
+        try:
+            django_validate_password(attrs["password"], user=candidate_user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)})
         return attrs
 
 

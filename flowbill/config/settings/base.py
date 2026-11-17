@@ -102,6 +102,9 @@ AUTH_USER_MODEL = "accounts.User"
 
 SITE_ID = 1
 
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
+EXPOSE_API_DOCS = config("EXPOSE_API_DOCS", default=True, cast=bool)
+
 # ─── Django REST Framework ───────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -117,6 +120,24 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
     ),
+    # Global request throttling (identity = IP for anonymous, user id when
+    # authenticated). Scoped rates below are enforced per auth endpoint via
+    # `throttle_scope` on the views in apps/accounts/views.py.
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": config("THROTTLE_ANON_RATE", default="60/min"),
+        "user": config("THROTTLE_USER_RATE", default="120/min"),
+        "auth_login": config("THROTTLE_LOGIN_RATE", default="10/min"),
+        "auth_register": config("THROTTLE_REGISTER_RATE", default="5/hour"),
+        "auth_verify": config("THROTTLE_VERIFY_RATE", default="10/min"),
+        "auth_resend": config("THROTTLE_RESEND_RATE", default="5/hour"),
+        "auth_password_reset_request": config("THROTTLE_RESET_REQUEST_RATE", default="5/hour"),
+        "auth_password_reset_confirm": config("THROTTLE_RESET_CONFIRM_RATE", default="10/min"),
+        "auth_refresh": config("THROTTLE_REFRESH_RATE", default="30/min"),
+    },
 }
 
 # ─── Simple JWT ──────────────────────────────────────────────────────────────

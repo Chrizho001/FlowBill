@@ -60,6 +60,10 @@ class InvoiceService:
         subtotal, tax_amount = InvoiceService._calculate_totals(line_items_data)
         discount = validated_data.get("discount_amount", Decimal("0.00"))
         total = subtotal + tax_amount - discount
+        if total < Decimal("0.00"):
+            raise serializers.ValidationError({
+                "discount_amount": "Discount amount cannot exceed invoice subtotal plus tax."
+            })
 
         invoice = Invoice.objects.create(
             owner=user,
@@ -109,6 +113,22 @@ class InvoiceService:
                 "Only draft invoices can be edited."
             )
 
+        if "client" in validated_data:
+            from apps.clients.models import Client
+
+            client_id = validated_data.pop("client")
+            try:
+                client = Client.objects.get(
+                    id=client_id,
+                    owner=invoice.owner,
+                    is_deleted=False,
+                )
+            except Client.DoesNotExist:
+                raise serializers.ValidationError({
+                    "client": "Client not found or does not belong to you."
+                })
+            invoice.client = client
+
         line_items_data = validated_data.pop("line_items", None)
 
         for field, value in validated_data.items():
@@ -117,10 +137,8 @@ class InvoiceService:
         if line_items_data is not None:
             # Recalculate totals with new line items
             subtotal, tax_amount = InvoiceService._calculate_totals(line_items_data)
-            discount = invoice.discount_amount
             invoice.subtotal = subtotal
             invoice.tax_amount = tax_amount
-            invoice.total = subtotal + tax_amount - discount
 
             # Replace line items
             invoice.line_items.all().delete()
@@ -135,6 +153,12 @@ class InvoiceService:
                 )
                 for item in line_items_data
             ])
+
+        invoice.total = invoice.subtotal + invoice.tax_amount - invoice.discount_amount
+        if invoice.total < Decimal("0.00"):
+            raise serializers.ValidationError({
+                "discount_amount": "Discount amount cannot exceed invoice subtotal plus tax."
+            })
 
         invoice.save()
         logger.info("invoices.updated", invoice_id=str(invoice.id))
@@ -196,6 +220,11 @@ class InvoiceService:
             raise serializers.ValidationError(
                 "Only pending or overdue invoices can be marked as paid."
             )
+
+        if Decimal(str(amount)) != invoice.total:
+            raise serializers.ValidationError({
+                "amount": "Paid amount must match the invoice total."
+            })
 
         invoice.status = "paid"
         invoice.save(update_fields=["status", "updated_at"])

@@ -2,8 +2,19 @@ from .base import *
 from decouple import config
 
 DEBUG = False
+EXPOSE_API_DOCS = config("EXPOSE_API_DOCS", default=False, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")])
+
+# ─── DRF throttling identity behind the reverse proxy ────────────────────────
+# DRF derives the throttle key from X-Forwarded-For only when NUM_PROXIES is
+# set. Behind Render's single proxy hop, unset NUM_PROXIES would bucket ALL
+# users on the proxy IP (mass false 429s); the value must match the real
+# number of trusted proxies so the header cannot be spoofed for fresh buckets.
+REST_FRAMEWORK = {
+    **REST_FRAMEWORK,
+    "NUM_PROXIES": config("NUM_PROXIES", cast=int, default=1),
+}
 
 # ─── Database ────────────────────────────────────────────────────────────────
 DATABASES = {

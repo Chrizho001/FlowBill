@@ -34,6 +34,18 @@ class TestNotificationTasks:
         assert "Sarah Connor" in html_body
         assert "Verification Code" in html_body
 
+    def test_verification_email_respects_frontend_url_setting(self):
+        from django.test import override_settings
+
+        user = UserFactory(email="prod@example.com", full_name="Prod User")
+        with override_settings(FRONTEND_URL="https://app.flowbill.io/"):
+            send_verification_email_task.apply(
+                args=[str(user.id), user.email, user.full_name, "654321"]
+            ).get()
+
+        html_body, _ = mail.outbox[-1].alternatives[0]
+        assert "https://app.flowbill.io/verify-email?email=prod@example.com&amp;otp=654321" in html_body
+
     def test_send_password_reset_email_task(self):
         user = UserFactory(email="john@example.com", full_name="John Wick")
         result = send_password_reset_email_task.apply(

@@ -118,28 +118,45 @@ class Invoice(BaseModel):
         """
         Auto-generates invoice number in format INV-YYYY-XXXX.
         Sequential per year across all invoices — not per user.
+        Uses integer sequence extraction rather than lexicographic string Max
+        so sequences above 9999 sort accurately.
         """
-        from django.db.models import Max
+        from django.db import connection
 
         year = timezone.now().year
         prefix = f"INV-{year}-"
 
-        last = Invoice.objects.filter(number__startswith=prefix).aggregate(
-            Max("number")
-        )["number__max"]
+        qs = Invoice.objects.filter(number__startswith=prefix)
+        if connection.in_atomic_block:
+            qs = qs.select_for_update()
 
-        if last:
-            last_seq = int(last.split("-")[-1])
-            next_seq = last_seq + 1
-        else:
-            next_seq = 1
+        existing_numbers = qs.values_list("number", flat=True)
+        max_seq = 0
+        for num in existing_numbers:
+            try:
+                seq = int(num.rsplit("-", 1)[-1])
+                if seq > max_seq:
+                    max_seq = seq
+            except (ValueError, IndexError):
+                continue
 
+        next_seq = max_seq + 1
         return f"{prefix}{next_seq:04d}"
 
     def save(self, *args, **kwargs):
+        from django.db import IntegrityError, transaction
+
         if not self.number:
-            self.number = self.generate_number()
-        super().save(*args, **kwargs)
+            for attempt in range(5):
+                try:
+                    with transaction.atomic():
+                        self.number = self.generate_number()
+                        return super().save(*args, **kwargs)
+                except IntegrityError:
+                    self.number = ""
+                    if attempt == 4:
+                        raise
+        return super().save(*args, **kwargs)
 
 
 class LineItem(models.Model):

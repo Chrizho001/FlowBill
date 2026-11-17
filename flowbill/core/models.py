@@ -12,6 +12,17 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class SoftDeleteQuerySet(models.QuerySet):
+    """QuerySet providing .active() to filter out soft-deleted rows."""
+
+    def active(self):
+        return self.filter(is_deleted=False)
+
+
+class SoftDeleteManager(models.Manager.from_queryset(SoftDeleteQuerySet)):
+    """Manager exposing .active() while preserving default queryset access."""
+
+
 class SoftDeleteModel(models.Model):
     """
     Soft delete — records are never truly deleted.
@@ -21,6 +32,8 @@ class SoftDeleteModel(models.Model):
 
     is_deleted = models.BooleanField(default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
+
+    objects = SoftDeleteManager()
 
     class Meta:
         abstract = True

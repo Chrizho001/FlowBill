@@ -121,3 +121,4 @@ All frontend commands must run from the `frontend/` directory:
 1. Run `uv run python -m pytest` in `flowbill/` to confirm all 218+ tests pass and coverage is ≥ 80%.
 2. Run `bash .claude/hooks/run-all-checks.sh` to ensure hook integrations are healthy.
 3. Consult `system design and Requirements/IMPLEMENTATION_STATUS.md` for prioritized feature pick-ups.
+

@@ -269,3 +269,108 @@ class TestBusinessProfileView:
         assert data["business_name"] == "Updated Agency Name"
         assert data["default_currency"] == "EUR"
         assert data["payment_instructions"] == "Wire transfer within 15 days."
+
+
+@pytest.mark.django_db
+class TestRefreshTokenView:
+    """Tests for POST /api/v1/auth/refresh/ (cookie-only rotation, H3)."""
+
+    url = "/api/v1/auth/refresh/"
+
+    def test_refresh_with_cookie_only_rotates_token(self, api_client, verified_user):
+        login_res = api_client.post("/api/v1/auth/login/", {
+            "email": verified_user.email,
+            "password": "SecurePass123!",
+        }, format="json")
+        assert login_res.status_code == 200
+        old_refresh_cookie = login_res.cookies["flowbill-refresh-token"].value
+
+        # Ensure no Authorization header is sent (simulating expired access token)
+        api_client.credentials()
+        refresh_res = api_client.post(self.url)
+
+        assert refresh_res.status_code == 200
+        assert "access" in refresh_res.json()["data"]
+        new_refresh_cookie = refresh_res.cookies["flowbill-refresh-token"].value
+        assert new_refresh_cookie != old_refresh_cookie
+
+        # Old refresh token is now blacklisted and cannot be reused
+        api_client.cookies["flowbill-refresh-token"] = old_refresh_cookie
+        reuse_res = api_client.post(self.url)
+        assert reuse_res.status_code == 401
+
+    def test_refresh_without_cookie_returns_401(self, api_client):
+        response = api_client.post(self.url)
+        assert response.status_code == 401
+        assert response.json()["code"] == "REFRESH_TOKEN_MISSING"
+
+
+@pytest.mark.django_db
+class TestSecurityHardeningAuth:
+    """Tests for M2, M3, M5, L1, L6 security findings."""
+
+    def test_password_reset_blacklists_outstanding_refresh_tokens(self, api_client, verified_user):
+        cache.clear()
+        login_res = api_client.post("/api/v1/auth/login/", {
+            "email": verified_user.email,
+            "password": "SecurePass123!",
+        }, format="json")
+        assert login_res.status_code == 200
+
+        # Request & confirm password reset
+        api_client.post("/api/v1/auth/password-reset/", {"email": verified_user.email}, format="json")
+        record = cache.get(f"{PASSWORD_RESET_CACHE_PREFIX}{verified_user.email.lower()}")
+        otp = record["otp"]
+
+        confirm_res = api_client.post("/api/v1/auth/password-reset/confirm/", {
+            "email": verified_user.email,
+            "otp": otp,
+            "password": "BrandNewPassword123!",
+            "confirm_password": "BrandNewPassword123!",
+        }, format="json")
+        assert confirm_res.status_code == 200
+
+        # Pre-reset refresh cookie should now be rejected (blacklisted)
+        refresh_res = api_client.post("/api/v1/auth/refresh/")
+        assert refresh_res.status_code == 401
+
+    def test_resend_verification_unknown_email_returns_200_anti_enumeration(self, api_client):
+        cache.clear()
+        res = api_client.post(
+            "/api/v1/auth/resend-verification/",
+            {"email": "nonexistent@example.com"},
+            format="json",
+        )
+        assert res.status_code == 200
+
+    def test_common_password_rejected_by_django_validators(self, api_client):
+        res = api_client.post("/api/v1/auth/register/", {
+            "email": "brandnew@example.com",
+            "full_name": "Brand New",
+            "password": "Password1!",
+            "confirm_password": "Password1!",
+        }, format="json")
+        assert res.status_code == 400
+        assert "password" in res.json()["fields"]
+
+    def test_schema_and_docs_blocked_when_debug_false(self, api_client):
+        from django.test import override_settings
+
+        with override_settings(DEBUG=False, EXPOSE_API_DOCS=False):
+            schema_res = api_client.get("/api/schema/")
+            docs_res = api_client.get("/api/docs/")
+            assert schema_res.status_code == 401
+            assert docs_res.status_code == 401
+
+    def test_unhandled_exception_returns_standardized_500_envelope(self):
+        from core.exceptions import flowbill_exception_handler
+
+        response = flowbill_exception_handler(RuntimeError("unexpected crash"), {})
+        assert response is not None
+        assert response.status_code == 500
+        assert response.data == {
+            "status": "error",
+            "code": "INTERNAL_SERVER_ERROR",
+            "message": "An unexpected error occurred.",
+            "fields": {},
+        }

@@ -13,7 +13,8 @@ def send_verification_email_task(self, user_id: str, email: str, full_name: str,
     """
     Asynchronously sends a beautifully styled 6-digit TOTP verification email to the user.
     """
-    verification_url = f"http://localhost:3000/verify-email?email={email}&otp={otp}"
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    verification_url = f"{frontend_url}/verify-email?email={email}&otp={otp}"
 
     context = {
         "full_name": full_name,
@@ -53,7 +54,8 @@ def send_password_reset_email_task(self, user_id: str, email: str, full_name: st
     """
     Asynchronously sends a beautifully styled 6-digit password reset code to the user.
     """
-    reset_url = f"http://localhost:3000/reset-password?email={email}&otp={otp}"
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    reset_url = f"{frontend_url}/reset-password?email={email}&otp={otp}"
 
     context = {
         "full_name": full_name,

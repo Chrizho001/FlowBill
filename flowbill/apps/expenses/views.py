@@ -35,7 +35,7 @@ class ExpenseListCreateView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
-        serializer = ExpenseSerializer(data=request.data)
+        serializer = ExpenseSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
         expense = ExpenseService.create_expense(
@@ -89,7 +89,12 @@ class ExpenseRetrieveUpdateDeleteView(APIView):
                 "fields": {},
             }, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ExpenseSerializer(expense, data=request.data, partial=True)
+        serializer = ExpenseSerializer(
+            expense,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
         serializer.is_valid(raise_exception=True)
 
         updated = ExpenseService.update_expense(

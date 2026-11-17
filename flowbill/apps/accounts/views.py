@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
@@ -28,6 +29,8 @@ class RegisterView(APIView):
     Creates a new user account and dispatches a 6-digit TOTP verification email.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_register"
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -55,6 +58,8 @@ class LoginView(APIView):
     Access token in response body, refresh token in HttpOnly cookie.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_login"
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -158,6 +163,8 @@ class VerifyEmailView(APIView):
     Verifies user email using the 6-digit OTP.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_verify"
 
     def post(self, request):
         serializer = VerifyEmailSerializer(data=request.data)
@@ -196,6 +203,8 @@ class ResendVerificationView(APIView):
     Resends a 6-digit verification code with a 60-second cooldown.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_resend"
 
     def post(self, request):
         serializer = ResendVerificationSerializer(data=request.data)
@@ -232,6 +241,8 @@ class PasswordResetRequestView(APIView):
     Requests a password reset code.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_password_reset_request"
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -254,6 +265,8 @@ class PasswordResetConfirmView(APIView):
     Verifies OTP and resets the password.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_password_reset_confirm"
 
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
@@ -336,6 +349,8 @@ class RefreshTokenView(APIView):
     Issues a new access token using the refresh token from the HttpOnly cookie.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_refresh"
 
     def post(self, request):
         refresh_token = request.COOKIES.get(
@@ -352,19 +367,32 @@ class RefreshTokenView(APIView):
             }, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
+            from django.contrib.auth import get_user_model
+            from rest_framework_simplejwt.settings import api_settings
+
+            User = get_user_model()
             token = RefreshToken(refresh_token)
-            new_access_token = str(token.access_token)
+
+            if request.user and request.user.is_authenticated:
+                user = request.user
+            else:
+                user_id = token.payload.get(api_settings.USER_ID_CLAIM)
+                try:
+                    user = User.objects.get(id=user_id, is_active=True)
+                except (User.DoesNotExist, ValueError, TypeError):
+                    raise TokenError("User not found or inactive.")
+
+            new_refresh = RefreshToken.for_user(user)
+            new_access_token = str(new_refresh.access_token)
+
+            # Blacklist old refresh token only after the replacement is minted
+            token.blacklist()
 
             response = Response({
                 "status": "success",
                 "data": {"access": new_access_token},
             }, status=status.HTTP_200_OK)
 
-            # Rotate refresh token
-            token.blacklist()
-            new_refresh = RefreshToken.for_user(
-                request.user if request.user.is_authenticated else token
-            )
             response.set_cookie(
                 key=settings.REST_AUTH["JWT_AUTH_REFRESH_COOKIE"],
                 value=str(new_refresh),
@@ -374,7 +402,7 @@ class RefreshTokenView(APIView):
                 max_age=7 * 24 * 60 * 60,
             )
 
-            logger.info("auth.refresh.success")
+            logger.info("auth.refresh.success", user_id=str(user.id))
             return response
 
         except TokenError:

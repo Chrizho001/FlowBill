@@ -57,6 +57,18 @@ class ExpenseSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_client(self, value):
+        if value is None:
+            return value
+        request = self.context.get("request")
+        owner = getattr(request, "user", None) or getattr(self.instance, "owner", None)
+        if owner and getattr(owner, "is_authenticated", False):
+            if value.owner_id != owner.id or value.is_deleted:
+                raise serializers.ValidationError(
+                    "Client not found or does not belong to you."
+                )
+        return value
+
 
 class ExpenseListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views."""

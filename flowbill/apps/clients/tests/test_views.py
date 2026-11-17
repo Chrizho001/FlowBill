@@ -161,6 +161,15 @@ class TestClientRetrieveUpdateDeleteView:
         client.delete(self.get_url(my_client.id))
         db_client = Client.objects.get(id=my_client.id)
         assert db_client.is_deleted is True
+        assert not Client.objects.active().filter(id=my_client.id).exists()
+
+    def test_cannot_delete_client_with_unpaid_invoice(self, auth_client):
+        from tests.factories import InvoiceFactory
+        client, user = auth_client
+        my_client = ClientFactory(owner=user)
+        InvoiceFactory(owner=user, client=my_client, status="pending")
+        response = client.delete(self.get_url(my_client.id))
+        assert response.status_code == 400
 
     def test_cannot_delete_another_users_client(self, auth_client):
         client, user = auth_client

@@ -12,10 +12,12 @@ User = get_user_model()
 OTP_EXPIRY = 60 * 15          # 15 minutes
 COOLDOWN_EXPIRY = 60          # 60 seconds resend cooldown
 PASSWORD_RESET_EXPIRY = 60 * 15
+PASSWORD_RESET_COOLDOWN_EXPIRY = 60   # 60 seconds resend cooldown
 
 OTP_CACHE_PREFIX = "email_verify_otp:"
 COOLDOWN_CACHE_PREFIX = "email_verify_cooldown:"
 PASSWORD_RESET_CACHE_PREFIX = "password_reset_otp:"
+PASSWORD_RESET_COOLDOWN_PREFIX = "password_reset_cooldown:"
 
 
 class AccountsService:
@@ -74,7 +76,7 @@ class AccountsService:
             logger.warning("accounts.verify_email_locked", email=normalized_email, reason="max_attempts_exceeded")
             raise ValueError("Too many failed attempts. Please request a new verification code.")
 
-        if record.get("otp") != otp:
+        if not secrets.compare_digest(str(record.get("otp", "")), str(otp)):
             record["attempts"] = attempts + 1
             cache.set(cache_key, record, timeout=OTP_EXPIRY)
             logger.warning("accounts.verify_email_wrong_code", email=normalized_email, attempts=record["attempts"])
@@ -109,23 +111,27 @@ class AccountsService:
         """
         Resends a 6-digit verification code to an unverified user.
         Enforces a 60-second cooldown period between requests.
+        Responds silently for unknown or already-verified emails to prevent
+        account enumeration.
         """
         normalized_email = email.lower().strip()
 
-        try:
-            user = User.objects.get(email__iexact=normalized_email)
-        except User.DoesNotExist:
-            logger.warning("accounts.resend_verification.user_not_found", email=normalized_email)
-            raise ValueError("No account found with this email address.")
-
-        if user.is_verified:
-            logger.info("accounts.resend_verification.already_verified", email=normalized_email, user_id=str(user.id))
-            raise ValueError("This email has already been verified.")
-
         cooldown_key = f"{COOLDOWN_CACHE_PREFIX}{normalized_email}"
         if cache.get(cooldown_key):
-            logger.warning("accounts.resend_verification.cooldown_active", email=normalized_email, user_id=str(user.id))
+            logger.warning("accounts.resend_verification.cooldown_active", email=normalized_email)
             raise ValueError("Please wait 60 seconds before requesting another code.")
+
+        try:
+            user = User.objects.get(email__iexact=normalized_email, is_active=True)
+        except User.DoesNotExist:
+            cache.set(cooldown_key, True, timeout=COOLDOWN_EXPIRY)
+            logger.info("accounts.resend_verification.user_not_found", email=normalized_email)
+            return True
+
+        if user.is_verified:
+            cache.set(cooldown_key, True, timeout=COOLDOWN_EXPIRY)
+            logger.info("accounts.resend_verification.already_verified", email=normalized_email, user_id=str(user.id))
+            return True
 
         otp = AccountsService._generate_verification_otp(user)
         AccountsService._send_verification_email(user, otp)
@@ -137,7 +143,9 @@ class AccountsService:
     def request_password_reset(email: str) -> bool:
         """
         Initiates password reset by generating a 6-digit reset OTP and emailing it.
-        Fails silently if user does not exist to avoid user enumeration.
+        Enforces a 60-second cooldown between sends, but fails silently (returns
+        True) if the user does not exist or the cooldown is active, to avoid
+        user enumeration.
         """
         normalized_email = email.lower().strip()
 
@@ -146,6 +154,17 @@ class AccountsService:
         except User.DoesNotExist:
             # Silent return for security
             logger.info("accounts.password_reset_unknown_email", email=normalized_email)
+            return True
+
+        cooldown_key = f"{PASSWORD_RESET_COOLDOWN_PREFIX}{normalized_email}"
+        if cache.get(cooldown_key):
+            # Silent return — the endpoint must respond identically whether or
+            # not an email is actually dispatched (anti-enumeration).
+            logger.warning(
+                "accounts.password_reset_cooldown_active",
+                email=normalized_email,
+                user_id=str(user.id),
+            )
             return True
 
         otp = f"{secrets.randbelow(1000000):06d}"
@@ -166,6 +185,9 @@ class AccountsService:
             )
         except Exception as e:
             logger.error("accounts.password_reset_email_failed", user_id=str(user.id), error=str(e))
+
+        # Set resend cooldown only after a real dispatch attempt
+        cache.set(cooldown_key, True, timeout=PASSWORD_RESET_COOLDOWN_EXPIRY)
 
         logger.info("accounts.password_reset_requested", user_id=str(user.id), email=user.email)
         return True
@@ -189,7 +211,7 @@ class AccountsService:
             logger.warning("accounts.password_reset_confirm.locked_out", email=normalized_email, attempts=attempts)
             raise ValueError("Too many failed attempts. Please request a new password reset code.")
 
-        if record.get("otp") != otp:
+        if not secrets.compare_digest(str(record.get("otp", "")), str(otp)):
             record["attempts"] = attempts + 1
             cache.set(cache_key, record, timeout=PASSWORD_RESET_EXPIRY)
             logger.warning("accounts.password_reset_confirm.wrong_code", email=normalized_email, attempts=record["attempts"])
@@ -203,6 +225,15 @@ class AccountsService:
 
         user.set_password(new_password)
         user.save(update_fields=["password", "updated_at"])
+
+        # Invalidate all outstanding JWT refresh tokens for this user
+        from rest_framework_simplejwt.token_blacklist.models import (
+            BlacklistedToken,
+            OutstandingToken,
+        )
+
+        for outstanding in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=outstanding)
 
         # Invalidate reset code
         cache.delete(cache_key)
